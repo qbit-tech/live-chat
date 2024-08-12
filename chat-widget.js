@@ -1,152 +1,349 @@
-(function() {
-  document.head.insertAdjacentHTML('beforeend', '<link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.16/tailwind.min.css" rel="stylesheet">');
+document.addEventListener("DOMContentLoaded", function () {
+  const chatInput = document.getElementById("chat-input");
+  const chatSubmit = document.getElementById("chat-submit");
+  const chatMessages = document.getElementById("chat-messages");
+  const chatBubble = document.getElementById("chat-bubble");
+  const chatPopup = document.getElementById("chat-popup");
+  const chatIcon = document.getElementById("chat-icon");
+  const landingPage = document.getElementById("landing-page");
+  const startConversationButton = document.getElementById("start-conversation");
+  const newConversationButton = document.getElementById("new-conversation");
+  const chatHeader = document.getElementById("chat-header");
+  const chatHeaderTitle = document.getElementById("chat-header-title");
+  const chatInputContainer = document.getElementById("chat-input-container");
+  const chatEndedMessage = document.getElementById("chat-ended-message");
+  const backButton = document.getElementById("back-to-landing");
+  const conversationList = document.querySelector(".conversation-list");
 
-  // Inject the CSS
-  const style = document.createElement('style');
-  style.innerHTML = `
-  .hidden {
-    display: none;
+  let chatMode = "openai";
+  let conversationHistory = [];
+  let currentConversationIndex = null;
+
+  init();
+
+  function init() {
+    loadConversationHistory();
+    addEventListeners();
+    updateConversationList();
   }
-  #chat-widget-container {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    flex-direction: column;
+
+  function addEventListeners() {
+    chatBubble.addEventListener("click", togglePopup);
+    startConversationButton.addEventListener("click", startConversation);
+    newConversationButton.addEventListener("click", startNewConversation);
+    backButton.addEventListener("click", resetToLandingPage);
+    chatSubmit.addEventListener("click", handleUserSubmit);
+    chatInput.addEventListener("keyup", handleKeyUp);
   }
-  #chat-popup {
-    height: 70vh;
-    max-height: 70vh;
-    transition: all 0.3s;
-    overflow: hidden;
-  }
-  @media (max-width: 768px) {
-    #chat-popup {
-      position: fixed;
-      top: 0;
-      right: 0;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      max-height: 100%;
-      border-radius: 0;
-    }
-  }
-  `;
-
-  document.head.appendChild(style);
-
-  // Create chat widget container
-  const chatWidgetContainer = document.createElement('div');
-  chatWidgetContainer.id = 'chat-widget-container';
-  document.body.appendChild(chatWidgetContainer);
-  
-  // Inject the HTML
-  chatWidgetContainer.innerHTML = `
-    <div id="chat-bubble" class="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer text-3xl">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-      </svg>
-    </div>
-    <div id="chat-popup" class="hidden absolute bottom-20 right-0 w-96 bg-white rounded-md shadow-md flex flex-col transition-all text-sm">
-      <div id="chat-header" class="flex justify-between items-center p-4 bg-gray-800 text-white rounded-t-md">
-        <h3 class="m-0 text-lg">Chat Widget by GPT4</h3>
-        <button id="close-popup" class="bg-transparent border-none text-white cursor-pointer">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-      <div id="chat-messages" class="flex-1 p-4 overflow-y-auto"></div>
-      <div id="chat-input-container" class="p-4 border-t border-gray-200">
-        <div class="flex space-x-4 items-center">
-          <input type="text" id="chat-input" class="flex-1 border border-gray-300 rounded-md px-4 py-2 outline-none w-3/4" placeholder="Type your message...">
-          <button id="chat-submit" class="bg-gray-800 text-white rounded-md px-4 py-2 cursor-pointer">Send</button>
-        </div>
-        <div class="flex text-center text-xs pt-4">
-          <span class="flex-1">Prompted by <a href="https://twitter.com/anantrp" target="_blank" class="text-indigo-600">@anantrp</a></span>
-        </div>
-      </div>
-    </div>
-  `;
-
-  // Add event listeners
-  const chatInput = document.getElementById('chat-input');
-  const chatSubmit = document.getElementById('chat-submit');
-  const chatMessages = document.getElementById('chat-messages');
-  const chatBubble = document.getElementById('chat-bubble');
-  const chatPopup = document.getElementById('chat-popup');
-  const closePopup = document.getElementById('close-popup');
-
-  chatSubmit.addEventListener('click', function() {
-    
-    const message = chatInput.value.trim();
-    if (!message) return;
-    
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-
-    chatInput.value = '';
-
-    onUserRequest(message);
-
-  });
-
-  chatInput.addEventListener('keyup', function(event) {
-    if (event.key === 'Enter') {
-      chatSubmit.click();
-    }
-  });
-
-  chatBubble.addEventListener('click', function() {
-    togglePopup();
-  });
-
-  closePopup.addEventListener('click', function() {
-    togglePopup();
-  });
 
   function togglePopup() {
-    const chatPopup = document.getElementById('chat-popup');
-    chatPopup.classList.toggle('hidden');
-    if (!chatPopup.classList.contains('hidden')) {
-      document.getElementById('chat-input').focus();
+    if (chatPopup.classList.contains("visible")) {
+      closeChatPopup();
+    } else {
+      openChatPopup();
     }
-  }  
+  }
+
+  function openChatPopup() {
+    chatPopup.classList.remove("hidden");
+    chatPopup.classList.add("visible");
+    chatIcon.style.transform = "rotate(180deg)";
+    chatIcon.src = "https://img.icons8.com/ios-glyphs/30/ffffff/delete-sign.png";
+    chatInput.focus();
+  }
+
+  function closeChatPopup() {
+    chatIcon.style.transform = "rotate(0)";
+    chatIcon.src = "https://img.icons8.com/ios-glyphs/30/ffffff/chat.png";
+    chatPopup.classList.add("closing");
+    chatPopup.addEventListener("animationend", onPopupCloseAnimationEnd, { once: true });
+  }
+
+  function onPopupCloseAnimationEnd() {
+    if (chatPopup.classList.contains("closing")) {
+      chatPopup.classList.remove("visible", "closing");
+      chatPopup.classList.add("hidden");
+      resetToLandingPage();
+    }
+  }
+
+  function startConversation() {
+    landingPage.classList.add("hidden");
+    chatHeader.classList.remove("hidden");
+    chatMessages.classList.remove("hidden");
+    chatInputContainer.classList.remove("hidden");
+    chatEndedMessage.classList.add("hidden");
+    backButton.style.display = "inline-block";
+    showEndButton();
+    updateChatHeaderTitle();
+  }
+
+  function startNewConversation() {
+    chatMessages.innerHTML = "";
+    startConversation();
+    const timestamp = new Date().toLocaleString();
+    conversationHistory.push({
+      status: "OpenAI",
+      preview: "New conversation started...",
+      timestamp,
+      active: true,
+      messages: [],
+    });
+    currentConversationIndex = conversationHistory.length - 1;
+    reply("Hello! How can I assist you today?");
+    updateConversationList();
+    saveConversationHistory();
+    checkActiveConversations();
+  }
+
+  function handleUserSubmit() {
+    const message = chatInput.value.trim();
+    if (!message) return;
+    chatInput.value = "";
+    onUserRequest(message);
+  }
+
+  function handleKeyUp(event) {
+    if (event.key === "Enter") {
+      chatSubmit.click();
+    }
+  }
 
   function onUserRequest(message) {
-    // Handle user request here
-    console.log('User request:', message);
-  
-    // Display user message
-    const messageElement = document.createElement('div');
-    messageElement.className = 'flex justify-end mb-3';
-    messageElement.innerHTML = `
-      <div class="bg-gray-800 text-white rounded-lg py-2 px-4 max-w-[70%]">
-        ${message}
-      </div>
-    `;
+    appendMessage("user", message);
+    updateCurrentConversation(message, "user");
+    if (chatMode === "openai") {
+      setTimeout(() => {
+        reply("Hello! This is a sample reply from OpenAI.");
+        offerRealAgentOption();
+      }, 200);
+    } else {
+      setTimeout(() => reply("You are now chatting with a real agent."), 200);
+    }
+  }
+
+  function appendMessage(type, content) {
+    const messageElement = document.createElement("div");
+    messageElement.className = `message ${type}`;
+    messageElement.innerHTML = `<div class="bubble">${content}</div>`;
     chatMessages.appendChild(messageElement);
     chatMessages.scrollTop = chatMessages.scrollHeight;
-  
-    chatInput.value = '';
-  
-    // Reply to the user
-    setTimeout(function() {
-      reply('Hello! This is a sample reply.');
-    }, 1000);
   }
-  
+
   function reply(message) {
-    const chatMessages = document.getElementById('chat-messages');
-    const replyElement = document.createElement('div');
-    replyElement.className = 'flex mb-3';
-    replyElement.innerHTML = `
-      <div class="bg-gray-200 text-black rounded-lg py-2 px-4 max-w-[70%]">
-        ${message}
-      </div>
-    `;
-    chatMessages.appendChild(replyElement);
+    appendMessage("reply", message);
+    updateCurrentConversation(message, "reply");
+  }
+
+  function offerRealAgentOption() {
+    const optionElement = document.createElement("div");
+    optionElement.className = "message reply";
+    optionElement.innerHTML = `
+      <div class="bubble">
+        If you need further assistance, you can <button id="switch-agent" class="switch-agent-button">Chat with a real agent</button>.
+      </div>`;
+    chatMessages.appendChild(optionElement);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    document.getElementById("switch-agent").addEventListener("click", switchToRealAgent);
+  }
+
+  function switchToRealAgent() {
+    chatMode = "agent";
+    updateCurrentConversationStatus("Live Agent");
+    resetChatMessages();
+    reply("You have been transferred to a real agent. Please start your conversation.");
+    chatInput.value = "";
+    chatInput.focus();
+    updateConversationList();
+    saveConversationHistory();
+    updateChatHeaderTitle();
+  }
+
+  function resetChatMessages() {
+    chatMessages.innerHTML = "";
+  }
+
+  function resumeConversation(index) {
+    currentConversationIndex = index;
+    chatMode = conversationHistory[index].status === "OpenAI" ? "openai" : "agent";
+    startConversation();
+    resetChatMessages();
+    conversationHistory[index].messages.forEach(message => appendMessage(message.type, message.content));
+    if (conversationHistory[index].active) {
+      chatInputContainer.classList.remove("hidden");
+      chatEndedMessage.classList.add("hidden");
+      showEndButton();
+    } else {
+      chatInputContainer.classList.add("hidden");
+      chatEndedMessage.classList.remove("hidden");
+      hideEndButton();
+    }
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
-  
-})();
+
+  function endCurrentConversation() {
+    if (currentConversationIndex !== null) {
+      conversationHistory[currentConversationIndex].active = false;
+      updateConversationList();
+      saveConversationHistory();
+      chatInputContainer.classList.add("hidden");
+      chatEndedMessage.classList.remove("hidden");
+      hideEndButton();
+      resetToLandingPage();
+      checkActiveConversations();
+    }
+  }
+
+  function resetToLandingPage() {
+    landingPage.classList.remove("hidden");
+    chatHeader.classList.add("hidden");
+    chatMessages.classList.add("hidden");
+    chatInputContainer.classList.add("hidden");
+    chatEndedMessage.classList.add("hidden");
+    chatMode = "openai";
+    backButton.style.display = "none";
+    updateConversationList();
+    hideEndButton();
+  }
+
+  function updateConversationList() {
+    conversationList.innerHTML = "";
+    if (conversationHistory.length === 0) {
+      addNoHistoryMessage();
+      removeClearButton();
+    } else {
+      renderConversationItems();
+      addClearButton();
+    }
+    checkActiveConversations();
+  }
+
+  function addNoHistoryMessage() {
+    const noHistoryMessage = document.createElement("p");
+    noHistoryMessage.className = "no-history-message";
+    noHistoryMessage.textContent = "No chat history";
+    conversationList.appendChild(noHistoryMessage);
+  }
+
+  function renderConversationItems() {
+    conversationHistory.forEach((conversation, index) => {
+      const conversationItem = createConversationItem(conversation, index);
+      conversationList.appendChild(conversationItem);
+    });
+    document.querySelectorAll(".btn-active").forEach(button => {
+      button.addEventListener("click", function () {
+        const index = parseInt(this.getAttribute("data-index"));
+        resumeConversation(index);
+      });
+    });
+  }
+
+  function createConversationItem(conversation, index) {
+    const statusColor = conversation.active ? "green" : "red";
+    const conversationItem = document.createElement("div");
+    conversationItem.className = "conversation-item";
+    conversationItem.innerHTML = `
+      <div class="conversation-icon">
+        <img src="https://via.placeholder.com/40" alt="User Icon">
+      </div>
+      <div class="conversation-content">
+        <p class="conversation-status">${conversation.status} - ${conversation.timestamp}</p>
+        <p style="color:${statusColor}; font-size: 1.5rem; margin: 0px">•</p>
+      </div>
+      <div class="conversation-action">
+        <button class="btn-active" data-index="${index}">&gt;</button>
+      </div>`;
+    return conversationItem;
+  }
+
+  function updateCurrentConversation(message, type) {
+    if (currentConversationIndex !== null) {
+      conversationHistory[currentConversationIndex].messages.push({ type, content: message });
+      saveConversationHistory();
+    }
+  }
+
+  function updateCurrentConversationStatus(status) {
+    if (currentConversationIndex !== null) {
+      conversationHistory[currentConversationIndex].status = status;
+    }
+  }
+
+  function showEndButton() {
+    if (!document.getElementById("end-conversation")) {
+      const endButton = document.createElement("button");
+      endButton.id = "end-conversation";
+      endButton.className = "btn-end";
+      endButton.textContent = "End Conversation";
+      endButton.addEventListener("click", endCurrentConversation);
+      chatHeader.appendChild(endButton);
+    }
+  }
+
+  function hideEndButton() {
+    const endButton = document.getElementById("end-conversation");
+    if (endButton) {
+      endButton.remove();
+    }
+  }
+
+  function checkActiveConversations() {
+    const activeConversationExists = conversationHistory.some(conversation => conversation.active);
+    toggleNewConversationButton(activeConversationExists);
+    toggleClearButton(activeConversationExists);
+  }
+
+  function toggleNewConversationButton(isActive) {
+    newConversationButton.disabled = isActive;
+    newConversationButton.textContent = isActive ? "Conversation Active" : "New Conversation";
+    newConversationButton.classList.toggle("disabled", isActive);
+  }
+
+  function toggleClearButton(isActive) {
+    const clearButton = document.getElementById("clear-conversations");
+    if (clearButton) {
+      clearButton.disabled = isActive;
+      clearButton.classList.toggle("disabled", isActive);
+    }
+  }
+
+  function saveConversationHistory() {
+    localStorage.setItem("conversationHistory", JSON.stringify(conversationHistory));
+  }
+
+  function loadConversationHistory() {
+    const savedHistory = localStorage.getItem("conversationHistory");
+    if (savedHistory) {
+      conversationHistory = JSON.parse(savedHistory);
+    }
+  }
+
+  function clearConversationHistory() {
+    conversationHistory = [];
+    saveConversationHistory();
+    updateConversationList();
+  }
+
+  function addClearButton() {
+    if (!document.getElementById("clear-conversations")) {
+      const clearButton = document.createElement("button");
+      clearButton.id = "clear-conversations";
+      clearButton.className = "btn-clear";
+      clearButton.textContent = "Clear Conversations";
+      clearButton.addEventListener("click", clearConversationHistory);
+      landingPage.appendChild(clearButton);
+      checkActiveConversations();
+    }
+  }
+
+  function removeClearButton() {
+    const clearButton = document.getElementById("clear-conversations");
+    if (clearButton) {
+      clearButton.remove();
+    }
+  }
+
+  function updateChatHeaderTitle() {
+    chatHeaderTitle.textContent = chatMode === "openai" ? "OpenAI" : "Live Agent";
+  }
+});

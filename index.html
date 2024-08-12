@@ -1,31 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Chat Widget - by GPT 4</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat Widget</title>
     <script async src="./chat-widget.js"></script>
-</head>
-<body class="bg-yellow-100">
-    <div class="flex flex-col items-center p-8 justify-center w-5xl h-screen md:text-center md:w-3xl ">
-        <div>
-            <h1 class="text-2xl font-bold leading-relaxed">About 95% of the code for this widget is written by GPT-4, I just edited and adjust a few things</h1>
+    <link rel="stylesheet" href="chat-widget.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1 class="title">Chat Widget</h1>
+    </div>
+    <div id="chat-widget-container">
+      <div id="chat-bubble" class="chat-bubble">
+        <img
+          id="chat-icon"
+          src="https://img.icons8.com/ios-glyphs/30/ffffff/chat.png"
+          alt="Chat Bubble"
+        />
+      </div>
+      <div id="chat-popup" class="chat-popup hidden">
+        <div id="landing-page" class="landing-page">
+          <div class="landing-header">
+            <h2>Hi there <span role="img" aria-label="wave">👋</span></h2>
+            <p>
+              Need help? Search our help center for answers or start a
+              conversation:
+            </p>
+          </div>
+          <div class="conversation-list">
+            <div class="conversation-item">
+              <div class="conversation-icon">
+                <img src="https://via.placeholder.com/40" alt="User Icon" />
+              </div>
+              <div class="conversation-action">
+                <button class="btn-active" id="start-conversation">></button>
+              </div>
+            </div>
+          </div>
+          <div class="search-box">
+            <input type="text" placeholder="Search for answers" />
+            <button class="search-button">Search</button>
+          </div>
+          <div class="new-conversation">
+            <button id="new-conversation">New Conversation</button>
+          </div>
         </div>
-
-    <div class="pt-8">
-        <a href="https://github.com/anantrp/chat-widget"class="relative inline-block px-4 py-2 font-medium group">
-            <span class="absolute inset-0 w-full h-full transition duration-200 ease-out transform translate-x-1 translate-y-1 bg-black group-hover:-translate-x-0 group-hover:-translate-y-0"></span>
-            <span class="absolute inset-0 w-full h-full bg-white border-2 border-black group-hover:bg-black"></span>
-            <span class="relative text-black group-hover:text-white">GitHub Repo</span>
-        </a>
-
-        <a href="https://twitter.com/anantrp" target="_blank" class="relative inline-block px-4 py-2 font-medium group ml-8">
-            <span class="absolute inset-0 w-full h-full transition duration-200 ease-out transform translate-x-1 translate-y-1 bg-black group-hover:-translate-x-0 group-hover:-translate-y-0"></span>
-            <span class="absolute inset-0 w-full h-full bg-white border-2 border-black group-hover:bg-black"></span>
-            <span class="relative text-black group-hover:text-white">@anantrp</span>
-        </a>
+        <div id="chat-header" class="chat-header hidden">
+          <button id="back-to-landing" class="back-button">
+            <img
+              src="https://img.icons8.com/ios-glyphs/30/ffffff/left.png"
+              alt="Back"
+            />
+          </button>
+          <h3 id="chat-header-title"></h3>
+        </div>
+        <div id="chat-messages" class="chat-messages hidden"></div>
+        <div id="chat-input-container" class="chat-input-container hidden">
+          <input
+            type="text"
+            id="chat-input"
+            class="chat-input"
+            placeholder="Type your message..."
+          />
+          <button id="chat-submit" class="chat-submit">Send</button>
+        </div>
+        <div id="chat-ended-message" class="chat-ended-message hidden">
+          <p>Chat has ended</p>
+        </div>
+      </div>
     </div>
-    </div>
-</body>
+  </body>
 </html>
