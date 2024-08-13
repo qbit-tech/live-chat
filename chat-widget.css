@@ -478,9 +478,8 @@ body {
 .search-results-container {
   position: absolute;
   background-color: var(--color-secondary);
-  box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.1),
-    4px 4px 8px rgba(0, 0, 0, 0.1),
-      0px 8px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.1), 4px 4px 8px rgba(0, 0, 0, 0.1),
+    0px 8px 12px rgba(0, 0, 0, 0.15);
   border-radius: 0.375rem;
   margin-top: 3.3rem;
   max-height: 15rem;
@@ -505,8 +504,7 @@ body {
   padding: 1rem;
   background-color: var(--color-secondary);
   border-radius: 0.5rem;
-  box-shadow: 
-    0 4px 8px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05), 
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05),
     0 -4px 8px rgba(0, 0, 0, 0.1), 0 -2px 4px rgba(0, 0, 0, 0.05),
     4px 0 8px rgba(0, 0, 0, 0.1), 2px 0 4px rgba(0, 0, 0, 0.05),
     -4px 0 8px rgba(0, 0, 0, 0.1), -2px 0 4px rgba(0, 0, 0, 0.05);
@@ -517,7 +515,7 @@ body {
 }
 
 .faq-answer::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -554,3 +552,46 @@ body {
   background-color: var(--color-primary-dark);
 }
 
+.user-form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin: 1rem;
+}
+
+.user-form div {
+  margin-bottom: 1rem;
+}
+
+.user-form label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.user-form input {
+  padding: 0.5rem;
+  width: 100%;
+  border-radius: 0.375rem;
+  border: 1px solid var(--color-tertiary);
+}
+
+.btn-start-chat {
+  background-color: var(--color-primary);
+  color: var(--color-icon);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  align-self: center;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.btn-start-chat:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.btn-start-chat:active {
+  transform: translateY(1px);
+  background-color: var(--color-primary-darker);
+}

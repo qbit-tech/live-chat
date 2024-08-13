@@ -12,8 +12,10 @@ document.addEventListener("DOMContentLoaded", function () {
   const chatHeaderTitle = document.getElementById("chat-header-title");
   const chatInputContainer = document.getElementById("chat-input-container");
   const chatEndedMessage = document.getElementById("chat-ended-message");
-  const backButton = document.getElementById("back-to-landing");
+  const backButton = document.querySelectorAll("#back-to-landing");
   const conversationList = document.querySelector(".conversation-list");
+  const userFormPage = document.getElementById("user-form-page");
+  const conversationForm = document.getElementById("conversation-form");
 
   let chatMode = "openai";
   let conversationHistory = [];
@@ -35,10 +37,13 @@ document.addEventListener("DOMContentLoaded", function () {
   function addEventListeners() {
     chatBubble.addEventListener("click", togglePopup);
     startConversationButton.addEventListener("click", startConversation);
-    newConversationButton.addEventListener("click", startNewConversation);
-    backButton.addEventListener("click", resetToLandingPage);
+    newConversationButton.addEventListener("click", showUserForm);
+    backButton.forEach((button) => {
+      button.addEventListener("click", resetToLandingPage);
+    });
     chatSubmit.addEventListener("click", handleUserSubmit);
     chatInput.addEventListener("keyup", handleKeyUp);
+    conversationForm.addEventListener("submit", handleFormSubmit);
     searchInput.addEventListener("input", function () {
       const query = searchInput.value.trim().toLowerCase();
       if (query.length > 0) {
@@ -84,13 +89,70 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function startConversation() {
     landingPage.classList.add("hidden");
+    userFormPage.classList.add("hidden");
     chatHeader.classList.remove("hidden");
     chatMessages.classList.remove("hidden");
     chatInputContainer.classList.remove("hidden");
     chatEndedMessage.classList.add("hidden");
-    backButton.style.display = "inline-block";
+    backButton.forEach((button) => {
+      button.style.display = "inline-block";
+    });
     showEndButton();
     updateChatHeaderTitle();
+  }
+
+  function showUserForm() {
+    const name = localStorage.getItem("userName");
+    const email = localStorage.getItem("userEmail");
+    const phone = localStorage.getItem("userPhone");
+
+    if (name && email && phone) {
+      startNewConversation();
+    } else {
+      landingPage.classList.add("hidden");
+      userFormPage.classList.remove("hidden");
+      chatHeader.classList.add("hidden");
+      chatMessages.classList.add("hidden");
+      chatInputContainer.classList.add("hidden");
+      backButton.forEach((button) => {
+        button.style.display = "inline-block";
+      });
+      loadFormValues();
+    }
+  }
+
+  function handleFormSubmit(event) {
+    event.preventDefault();
+    const name = document.getElementById("name").value;
+    const email = document.getElementById("email").value;
+    const phone = document.getElementById("phone").value;
+
+    console.log("User Info Submitted:", { name, email, phone });
+
+    saveFormValues(name, email, phone);
+    startNewConversation();
+  }
+
+  function saveFormValues(name, email, phone) {
+    localStorage.setItem("userName", name);
+    localStorage.setItem("userEmail", email);
+    localStorage.setItem("userPhone", phone);
+  }
+
+  function loadFormValues() {
+    const name = localStorage.getItem("userName");
+    const email = localStorage.getItem("userEmail");
+    const phone = localStorage.getItem("userPhone");
+
+    if (name) {
+      document.getElementById("name").value = name;
+    }
+    if (email) {
+      document.getElementById("email").value = email;
+    }
+    if (phone) {
+      document.getElementById("phone").value = phone;
+    }
   }
 
   function startNewConversation() {
@@ -145,11 +207,13 @@ document.addEventListener("DOMContentLoaded", function () {
     if (type === "user") {
       imageSrc = "./assets/user.png";
     } else if (type === "reply") {
-      imageSrc = chatMode === "openai" ? "./assets/bot.png" : "./assets/admin.png";
+      imageSrc =
+        chatMode === "openai" ? "./assets/bot.png" : "./assets/admin.png";
     }
 
     const previousMessage = chatMessages.lastElementChild;
-    const isSameSender = previousMessage && previousMessage.classList.contains(type);
+    const isSameSender =
+      previousMessage && previousMessage.classList.contains(type);
 
     if (isSameSender) {
       const previousIcon = previousMessage.querySelector(".bubble-icon");
@@ -187,7 +251,9 @@ document.addEventListener("DOMContentLoaded", function () {
     chatMode = "agent";
     updateCurrentConversationStatus("Live Agent");
     resetChatMessages();
-    reply("You have been transferred to a real agent. Please start your conversation.");
+    reply(
+      "You have been transferred to a real agent. Please start your conversation."
+    );
     chatInput.value = "";
     chatInput.focus();
     updateConversationList();
@@ -201,7 +267,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function resumeConversation(index) {
     currentConversationIndex = index;
-    chatMode = conversationHistory[index].status === "OpenAI" ? "openai" : "agent";
+    chatMode =
+      conversationHistory[index].status === "OpenAI" ? "openai" : "agent";
     startConversation();
     resetChatMessages();
     conversationHistory[index].messages.forEach((message) =>
@@ -238,8 +305,11 @@ document.addEventListener("DOMContentLoaded", function () {
     chatMessages.classList.add("hidden");
     chatInputContainer.classList.add("hidden");
     chatEndedMessage.classList.add("hidden");
+    userFormPage.classList.add("hidden");
     chatMode = "openai";
-    backButton.style.display = "none";
+    backButton.forEach((button) => {
+      button.style.display = "none";
+    });
     updateConversationList();
     hideEndButton();
   }
@@ -293,8 +363,12 @@ document.addEventListener("DOMContentLoaded", function () {
         <img src="${iconSrc}" alt="User Icon">
       </div>
       <div class="conversation-content">
-        <p class="conversation-status">${conversation.status} - ${conversation.timestamp}</p>
-        <p class="status-dot" data-status="${conversation.active ? 'active' : 'inactive'}">•</p>
+        <p class="conversation-status">${conversation.status} - ${
+      conversation.timestamp
+    }</p>
+        <p class="status-dot" data-status="${
+          conversation.active ? "active" : "inactive"
+        }">•</p>
       </div>
       <div class="conversation-action">
         <button class="btn-active" data-index="${index}">&gt;</button>
@@ -361,7 +435,10 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function saveConversationHistory() {
-    localStorage.setItem("conversationHistory", JSON.stringify(conversationHistory));
+    localStorage.setItem(
+      "conversationHistory",
+      JSON.stringify(conversationHistory)
+    );
   }
 
   function loadConversationHistory() {
@@ -397,7 +474,8 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function updateChatHeaderTitle() {
-    chatHeaderTitle.textContent = chatMode === "openai" ? "OpenAI" : "Live Agent";
+    chatHeaderTitle.textContent =
+      chatMode === "openai" ? "OpenAI" : "Live Agent";
   }
 
   async function fetchFAQSuggestions(query) {
@@ -435,26 +513,25 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function showFAQAnswer(faq) {
     landingPage.classList.add("hidden");
-  
+
     const faqAnswerElement = document.createElement("div");
     faqAnswerElement.className = "faq-answer";
-  
+
     faqAnswerElement.innerHTML = `
       <p>${faq.answer}</p>
       <button id="back-to-search" class="back-to-search">Back to Search</button>
     `;
-  
+
     resetChatMessages();
     chatMessages.appendChild(faqAnswerElement);
-  
+
     chatMessages.classList.remove("hidden");
     chatInputContainer.classList.add("hidden");
-  
+
     document
       .getElementById("back-to-search")
       .addEventListener("click", resetToLandingPage);
   }
-  
 
   function clearSearchResults() {
     searchResultsContainer.innerHTML = "";
