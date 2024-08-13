@@ -16,8 +16,9 @@
       <div id="chat-bubble" class="chat-bubble">
         <img
           id="chat-icon"
-          src="https://img.icons8.com/ios-glyphs/30/ffffff/chat.png"
+          src="./assets/customer-service.svg"
           alt="Chat Bubble"
+          style="width: 40px; height: 40px;"
         />
       </div>
       <div id="chat-popup" class="chat-popup hidden">
@@ -29,20 +30,21 @@
               conversation:
             </p>
           </div>
+          <div class="search-box">
+            <input type="text" placeholder="Search for answers" />
+            <button class="search-button">Search</button>
+          </div>
           <div class="conversation-list">
             <div class="conversation-item">
               <div class="conversation-icon">
-                <img src="https://via.placeholder.com/40" alt="User Icon" />
+                <img src="./assets/bot.png" alt="bot Icon" />
               </div>
               <div class="conversation-action">
                 <button class="btn-active" id="start-conversation">></button>
               </div>
             </div>
           </div>
-          <div class="search-box">
-            <input type="text" placeholder="Search for answers" />
-            <button class="search-button">Search</button>
-          </div>
+          
           <div class="new-conversation">
             <button id="new-conversation">New Conversation</button>
           </div>
@@ -50,8 +52,9 @@
         <div id="chat-header" class="chat-header hidden">
           <button id="back-to-landing" class="back-button">
             <img
-              src="https://img.icons8.com/ios-glyphs/30/ffffff/left.png"
+              src="./assets/arrow.svg"
               alt="Back"
+              style="width: 20px; height: 20px;"
             />
           </button>
           <h3 id="chat-header-title"></h3>

@@ -19,6 +19,11 @@ document.addEventListener("DOMContentLoaded", function () {
   let conversationHistory = [];
   let currentConversationIndex = null;
 
+  const searchInput = document.querySelector(".search-box input");
+  const searchResultsContainer = document.createElement("div");
+  searchResultsContainer.classList.add("search-results-container");
+  searchInput.parentNode.appendChild(searchResultsContainer);
+
   init();
 
   function init() {
@@ -34,6 +39,14 @@ document.addEventListener("DOMContentLoaded", function () {
     backButton.addEventListener("click", resetToLandingPage);
     chatSubmit.addEventListener("click", handleUserSubmit);
     chatInput.addEventListener("keyup", handleKeyUp);
+    searchInput.addEventListener("input", function () {
+      const query = searchInput.value.trim().toLowerCase();
+      if (query.length > 0) {
+        fetchFAQSuggestions(query);
+      } else {
+        clearSearchResults();
+      }
+    });
   }
 
   function togglePopup() {
@@ -48,15 +61,17 @@ document.addEventListener("DOMContentLoaded", function () {
     chatPopup.classList.remove("hidden");
     chatPopup.classList.add("visible");
     chatIcon.style.transform = "rotate(180deg)";
-    chatIcon.src = "https://img.icons8.com/ios-glyphs/30/ffffff/delete-sign.png";
+    chatIcon.src = "./assets/delete.svg";
     chatInput.focus();
   }
 
   function closeChatPopup() {
     chatIcon.style.transform = "rotate(0)";
-    chatIcon.src = "https://img.icons8.com/ios-glyphs/30/ffffff/chat.png";
+    chatIcon.src = "./assets/customer-service.svg";
     chatPopup.classList.add("closing");
-    chatPopup.addEventListener("animationend", onPopupCloseAnimationEnd, { once: true });
+    chatPopup.addEventListener("animationend", onPopupCloseAnimationEnd, {
+      once: true,
+    });
   }
 
   function onPopupCloseAnimationEnd() {
@@ -125,7 +140,26 @@ document.addEventListener("DOMContentLoaded", function () {
   function appendMessage(type, content) {
     const messageElement = document.createElement("div");
     messageElement.className = `message ${type}`;
-    messageElement.innerHTML = `<div class="bubble">${content}</div>`;
+
+    let imageSrc = "";
+    if (type === "user") {
+      imageSrc = "./assets/user.png";
+    } else if (type === "reply") {
+      imageSrc = chatMode === "openai" ? "./assets/bot.png" : "./assets/admin.png";
+    }
+
+    const previousMessage = chatMessages.lastElementChild;
+    const isSameSender = previousMessage && previousMessage.classList.contains(type);
+
+    if (isSameSender) {
+      const previousIcon = previousMessage.querySelector(".bubble-icon");
+      if (previousIcon) previousIcon.style.display = "none";
+    }
+
+    messageElement.innerHTML = `
+      <div class="bubble">${content}</div>
+      <img src="${imageSrc}" alt="${type}" class="bubble-icon">`;
+
     chatMessages.appendChild(messageElement);
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
@@ -144,7 +178,9 @@ document.addEventListener("DOMContentLoaded", function () {
       </div>`;
     chatMessages.appendChild(optionElement);
     chatMessages.scrollTop = chatMessages.scrollHeight;
-    document.getElementById("switch-agent").addEventListener("click", switchToRealAgent);
+    document
+      .getElementById("switch-agent")
+      .addEventListener("click", switchToRealAgent);
   }
 
   function switchToRealAgent() {
@@ -168,7 +204,9 @@ document.addEventListener("DOMContentLoaded", function () {
     chatMode = conversationHistory[index].status === "OpenAI" ? "openai" : "agent";
     startConversation();
     resetChatMessages();
-    conversationHistory[index].messages.forEach(message => appendMessage(message.type, message.content));
+    conversationHistory[index].messages.forEach((message) =>
+      appendMessage(message.type, message.content)
+    );
     if (conversationHistory[index].active) {
       chatInputContainer.classList.remove("hidden");
       chatEndedMessage.classList.add("hidden");
@@ -230,7 +268,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const conversationItem = createConversationItem(conversation, index);
       conversationList.appendChild(conversationItem);
     });
-    document.querySelectorAll(".btn-active").forEach(button => {
+    document.querySelectorAll(".btn-active").forEach((button) => {
       button.addEventListener("click", function () {
         const index = parseInt(this.getAttribute("data-index"));
         resumeConversation(index);
@@ -240,15 +278,23 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function createConversationItem(conversation, index) {
     const statusColor = conversation.active ? "green" : "red";
+    let iconSrc = "";
+
+    if (conversation.status === "OpenAI") {
+      iconSrc = "./assets/bot.png";
+    } else if (conversation.status === "Live Agent") {
+      iconSrc = "./assets/admin.png";
+    }
+
     const conversationItem = document.createElement("div");
     conversationItem.className = "conversation-item";
     conversationItem.innerHTML = `
       <div class="conversation-icon">
-        <img src="https://via.placeholder.com/40" alt="User Icon">
+        <img src="${iconSrc}" alt="User Icon">
       </div>
       <div class="conversation-content">
         <p class="conversation-status">${conversation.status} - ${conversation.timestamp}</p>
-        <p style="color:${statusColor}; font-size: 1.5rem; margin: 0px">•</p>
+        <p class="status-dot" data-status="${conversation.active ? 'active' : 'inactive'}">•</p>
       </div>
       <div class="conversation-action">
         <button class="btn-active" data-index="${index}">&gt;</button>
@@ -258,7 +304,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function updateCurrentConversation(message, type) {
     if (currentConversationIndex !== null) {
-      conversationHistory[currentConversationIndex].messages.push({ type, content: message });
+      conversationHistory[currentConversationIndex].messages.push({
+        type,
+        content: message,
+      });
       saveConversationHistory();
     }
   }
@@ -288,14 +337,18 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function checkActiveConversations() {
-    const activeConversationExists = conversationHistory.some(conversation => conversation.active);
+    const activeConversationExists = conversationHistory.some(
+      (conversation) => conversation.active
+    );
     toggleNewConversationButton(activeConversationExists);
     toggleClearButton(activeConversationExists);
   }
 
   function toggleNewConversationButton(isActive) {
     newConversationButton.disabled = isActive;
-    newConversationButton.textContent = isActive ? "Conversation Active" : "New Conversation";
+    newConversationButton.textContent = isActive
+      ? "Conversation Active"
+      : "New Conversation";
     newConversationButton.classList.toggle("disabled", isActive);
   }
 
@@ -325,15 +378,15 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function addClearButton() {
-    if (!document.getElementById("clear-conversations")) {
-      const clearButton = document.createElement("button");
-      clearButton.id = "clear-conversations";
-      clearButton.className = "btn-clear";
-      clearButton.textContent = "Clear Conversations";
-      clearButton.addEventListener("click", clearConversationHistory);
-      landingPage.appendChild(clearButton);
-      checkActiveConversations();
-    }
+    removeClearButton();
+
+    const clearButton = document.createElement("button");
+    clearButton.id = "clear-conversations";
+    clearButton.className = "btn-clear";
+    clearButton.textContent = "Clear History";
+    clearButton.addEventListener("click", clearConversationHistory);
+
+    conversationList.appendChild(clearButton);
   }
 
   function removeClearButton() {
@@ -345,5 +398,66 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function updateChatHeaderTitle() {
     chatHeaderTitle.textContent = chatMode === "openai" ? "OpenAI" : "Live Agent";
+  }
+
+  async function fetchFAQSuggestions(query) {
+    try {
+      const response = await fetch(`http://localhost:3001/faqs`);
+      const data = await response.json();
+      const filteredResults = data.payload.results.filter((item) =>
+        item.question.toLowerCase().includes(query)
+      );
+      displaySearchResults(filteredResults);
+    } catch (error) {
+      console.error("Error fetching FAQ suggestions:", error);
+    }
+  }
+
+  function displaySearchResults(results) {
+    clearSearchResults();
+
+    if (results.length > 0) {
+      results.forEach((result) => {
+        const resultItem = document.createElement("div");
+        resultItem.classList.add("search-result-item");
+        resultItem.textContent = result.question;
+        resultItem.addEventListener("click", () => {
+          showFAQAnswer(result);
+          clearSearchResults();
+        });
+        searchResultsContainer.appendChild(resultItem);
+      });
+      searchResultsContainer.style.display = "block";
+    } else {
+      searchResultsContainer.style.display = "none";
+    }
+  }
+
+  function showFAQAnswer(faq) {
+    landingPage.classList.add("hidden");
+  
+    const faqAnswerElement = document.createElement("div");
+    faqAnswerElement.className = "faq-answer";
+  
+    faqAnswerElement.innerHTML = `
+      <p>${faq.answer}</p>
+      <button id="back-to-search" class="back-to-search">Back to Search</button>
+    `;
+  
+    resetChatMessages();
+    chatMessages.appendChild(faqAnswerElement);
+  
+    chatMessages.classList.remove("hidden");
+    chatInputContainer.classList.add("hidden");
+  
+    document
+      .getElementById("back-to-search")
+      .addEventListener("click", resetToLandingPage);
+  }
+  
+
+  function clearSearchResults() {
+    searchResultsContainer.innerHTML = "";
+    searchResultsContainer.style.display = "none";
   }
 });
