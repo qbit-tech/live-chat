@@ -18,6 +18,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const conversationForm = document.getElementById("conversation-form");
   const goToLatestButton = document.getElementById("go-to-latest");
   const emailTranscriptButton = document.getElementById("email-transcript");
+  const backToChatButton = document.getElementById("back-to-chat");
+  const faqAnswerPage = document.getElementById("faq-answer-page");
+  const faqQuestionElement = document.getElementById("faq-question");
+  const faqAnswerElement = document.getElementById("faq-answer");
+  const backToSearchButton = document.getElementById("back-to-search");
 
   let chatMode = "openai";
   let conversationHistory = [];
@@ -86,6 +91,10 @@ document.addEventListener("DOMContentLoaded", function () {
     goToLatestButton.addEventListener("click", scrollToLatest);
 
     emailTranscriptButton.addEventListener("click", showEmailTranscriptPage);
+
+    if (backToChatButton) {
+      backToChatButton.addEventListener("click", backToChat);
+    }
   }
 
   function togglePopup() {
@@ -512,26 +521,17 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function showFAQAnswer(faq) {
+    faqQuestionElement.textContent = faq.question;
+    faqAnswerElement.textContent = faq.answer;
+
     landingPage.classList.add("hidden");
-
-    const faqAnswerElement = document.createElement("div");
-    faqAnswerElement.className = "faq-answer";
-
-    faqAnswerElement.innerHTML = `
-      <p>${faq.answer}</p>
-      <button id="back-to-search" class="back-to-search">Back to Search</button>
-    `;
-
-    resetChatMessages();
-    chatMessages.appendChild(faqAnswerElement);
-
-    chatMessages.classList.remove("hidden");
-    chatInputContainer.classList.add("hidden");
-
-    document
-      .getElementById("back-to-search")
-      .addEventListener("click", resetToLandingPage);
+    faqAnswerPage.classList.remove("hidden");
   }
+
+  backToSearchButton.addEventListener("click", function () {
+    faqAnswerPage.classList.add("hidden");
+    landingPage.classList.remove("hidden");
+  });
 
   function clearSearchResults() {
     searchResultsContainer.innerHTML = "";
@@ -575,10 +575,46 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function sendEmailTranscript(event) {
     event.preventDefault();
-
+  
     const email = document.querySelector('#email-transcript-page input[type="email"]').value;
-
-    console.log(`Email Transcript akan dikirim ke: ${email}`);
+  
+    const conversationHistory = JSON.parse(localStorage.getItem("conversationHistory"));
+  
+    const selectedIndex = currentConversationIndex;
+    const selectedConversation = conversationHistory[selectedIndex];
+    
+    if (selectedConversation && !selectedConversation.active) {
+      let chatContent = `Chat Type: ${selectedConversation.status}\n`;
+      selectedConversation.messages.forEach(message => {
+        chatContent += `${message.type === 'user' ? 'User' : (selectedConversation.status === 'OpenAI' ? 'Bot' : 'Real Agent')}: ${message.content}\n`;
+      });
+  
+      console.log(`Email tujuan: ${email}`);
+      console.log(`Isi chat:\n${chatContent}`);
+    } else if (selectedConversation && selectedConversation.active) {
+      console.log('Percakapan yang dipilih masih aktif. Email transcript tidak dapat dikirim.');
+    } else {
+      console.log('Percakapan yang dipilih tidak tersedia atau masih aktif.');
+    }
+  
     resetToLandingPage();
   }
+  
+  function backToChat() {
+    const emailTranscriptPage = document.getElementById("email-transcript-page");
+
+    emailTranscriptPage.classList.add("hidden");
+
+    chatHeader.classList.remove("hidden");
+    chatMessages.classList.remove("hidden");
+    
+    if (conversationHistory[currentConversationIndex].active) {
+      chatInputContainer.classList.remove("hidden");
+      chatEndedMessage.classList.add("hidden");
+    } else {
+      chatInputContainer.classList.add("hidden");
+      chatEndedMessage.classList.remove("hidden");
+    }
+  }
+
 });

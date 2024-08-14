@@ -49,6 +49,23 @@
             <button id="new-conversation">New Conversation</button>
           </div>
         </div>
+        <div id="faq-answer-page" class="hidden">
+          <div class="chat-header">
+            <button id="back-to-search" class="back-button">
+              <img
+                src="./assets/arrow.svg"
+                alt="Back"
+                style="width: 20px; height: 20px"
+              />
+            </button>
+            <h3 id="faq-question"></h3>
+          </div>
+          <div class="chat-messages">
+            <div class="faq-answer">
+              <p id="faq-answer"></p>
+            </div>
+          </div>
+        </div>        
         <div id="user-form-page" class="hidden">
           <div class="chat-header">
             <button id="back-to-landing" class="back-button">
@@ -131,7 +148,7 @@
         </div>
         <div id="email-transcript-page" class="hidden">
           <div class="chat-header">
-            <button id="back-to-landing" class="back-button">
+            <button id="back-to-chat" class="back-button">
               <img
                 src="./assets/arrow.svg"
                 alt="Back"
@@ -146,7 +163,7 @@
                 <label for="email">Your chat transcript will be sent here:</label>
                 <input type="email" required />
               </div>
-              <button type="submit" class="send-email">Send</button>
+              <button type="submit" class="btn-start-chat">Send</button>
             </form>
           </div>
         </div>
