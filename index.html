@@ -7,11 +7,6 @@
     <title>Chat Widget</title>
     <script async src="./chat-widget.js"></script>
     <link rel="stylesheet" href="chat-widget.css" />
-
-    <script>
-      const widget = new QLiveChatWidget({ id: "", endpointFAQ: "", endpointChat: "optional" });
-      widget.init();
-    </script>
   </head>
   <body>
     <div class="container">
@@ -21,8 +16,9 @@
       <div id="chat-bubble" class="chat-bubble">
         <img
           id="chat-icon"
-          src="https://img.icons8.com/ios-glyphs/30/ffffff/chat.png"
+          src="./assets/customer-service.svg"
           alt="Chat Bubble"
+          style="width: 40px; height: 40px"
         />
       </div>
       <div id="chat-popup" class="chat-popup hidden">
@@ -34,34 +30,107 @@
               conversation:
             </p>
           </div>
+          <div class="search-box">
+            <input type="text" placeholder="Search for answers" />
+            <button class="search-button">Search</button>
+          </div>
           <div class="conversation-list">
             <div class="conversation-item">
               <div class="conversation-icon">
-                <img src="https://via.placeholder.com/40" alt="User Icon" />
+                <img src="./assets/bot.png" alt="bot Icon" />
               </div>
               <div class="conversation-action">
                 <button class="btn-active" id="start-conversation">></button>
               </div>
             </div>
           </div>
-          <div class="search-box">
-            <input type="text" placeholder="Search for answers" />
-            <button class="search-button">Search</button>
-          </div>
+
           <div class="new-conversation">
             <button id="new-conversation">New Conversation</button>
+          </div>
+        </div>
+        <div id="faq-answer-page" class="hidden">
+          <div class="chat-header">
+            <button id="back-to-search" class="back-button">
+              <img
+                src="./assets/arrow.svg"
+                alt="Back"
+                style="width: 20px; height: 20px"
+              />
+            </button>
+            <h3 id="faq-question"></h3>
+          </div>
+          <div class="chat-messages">
+            <div class="faq-answer">
+              <p id="faq-answer"></p>
+            </div>
+          </div>
+        </div>        
+        <div id="user-form-page" class="hidden">
+          <div class="chat-header">
+            <button id="back-to-landing" class="back-button">
+              <img
+                src="./assets/arrow.svg"
+                alt="Back"
+                style="width: 20px; height: 20px"
+              />
+            </button>
+            <h3>User Information</h3>
+          </div>
+          <div class="chat-messages">
+            <form id="conversation-form" class="user-form">
+              <div>
+                <label for="name">Name:</label>
+                <input type="text" id="name" name="name" required />
+              </div>
+              <div>
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required />
+              </div>
+              <div>
+                <label for="phone">Phone:</label>
+                <input type="tel" id="phone" name="phone" required />
+              </div>
+              <button type="submit" class="btn-start-chat">Start Chat</button>
+            </form>
           </div>
         </div>
         <div id="chat-header" class="chat-header hidden">
           <button id="back-to-landing" class="back-button">
             <img
-              src="https://img.icons8.com/ios-glyphs/30/ffffff/left.png"
+              src="./assets/arrow.svg"
               alt="Back"
+              style="width: 20px; height: 20px"
             />
           </button>
           <h3 id="chat-header-title"></h3>
+          <div class="dropdown">
+            <button class="dropdown-toggle">
+              <img
+                src="./assets/more.svg"
+                alt="More"
+                style="width: 25px; height: 25px"
+              />
+            </button>
+            <div class="dropdown-menu hidden">
+              <button
+                id="end-conversation"
+                class="dropdown-item dropdown-item-1"
+              >
+                End Conversation
+              </button>
+              <button
+                id="email-transcript"
+                class="dropdown-item dropdown-item-2"
+              >
+                Email Transcript
+              </button>
+            </div>
+          </div>
         </div>
-        <div id="chat-messages" class="chat-messages hidden"></div>
+
+        <div id="chat-messages" class="chat-messages hidden">
+        </div>
         <div id="chat-input-container" class="chat-input-container hidden">
           <input
             type="text"
@@ -70,9 +139,33 @@
             placeholder="Type your message..."
           />
           <button id="chat-submit" class="chat-submit">Send</button>
+          <button id="go-to-latest" class="go-to-latest hidden">
+            Go to Latest
+          </button>
         </div>
         <div id="chat-ended-message" class="chat-ended-message hidden">
           <p>Chat has ended</p>
+        </div>
+        <div id="email-transcript-page" class="hidden">
+          <div class="chat-header">
+            <button id="back-to-chat" class="back-button">
+              <img
+                src="./assets/arrow.svg"
+                alt="Back"
+                style="width: 20px; height: 20px"
+              />
+            </button>
+            <h3>Email Transcript</h3>
+          </div>
+          <div class="chat-messages">
+            <form id="transcript-form" class="user-form">
+              <div>
+                <label for="email">Your chat transcript will be sent here:</label>
+                <input type="email" required />
+              </div>
+              <button type="submit" class="btn-start-chat">Send</button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
