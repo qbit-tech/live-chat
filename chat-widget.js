@@ -16,6 +16,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const conversationList = document.querySelector(".conversation-list");
   const userFormPage = document.getElementById("user-form-page");
   const conversationForm = document.getElementById("conversation-form");
+  const goToLatestButton = document.getElementById("go-to-latest");
+  const emailTranscriptButton = document.getElementById("email-transcript");
 
   let chatMode = "openai";
   let conversationHistory = [];
@@ -52,6 +54,38 @@ document.addEventListener("DOMContentLoaded", function () {
         clearSearchResults();
       }
     });
+
+    const dropdownToggle = document.querySelector(".dropdown-toggle");
+    const dropdownMenu = document.querySelector(".dropdown-menu");
+
+    dropdownToggle.addEventListener("click", function () {
+      dropdownMenu.classList.toggle("hidden");
+      dropdownToggle.parentElement.classList.toggle("open");
+    });
+
+    document.addEventListener("click", function (e) {
+      if (!dropdownToggle.parentElement.contains(e.target)) {
+        dropdownMenu.classList.add("hidden");
+        dropdownToggle.parentElement.classList.remove("open");
+      }
+    });
+
+    const endConversationButton = document.getElementById("end-conversation");
+    endConversationButton.addEventListener("click", endCurrentConversation);
+
+    chatMessages.addEventListener("scroll", function () {
+      const atBottom = chatMessages.scrollHeight - chatMessages.scrollTop === chatMessages.clientHeight;
+
+      if (atBottom) {
+        hideGoToLatestButton();
+      } else {
+        showGoToLatestButton();
+      }
+    });
+
+    goToLatestButton.addEventListener("click", scrollToLatest);
+
+    emailTranscriptButton.addEventListener("click", showEmailTranscriptPage);
   }
 
   function togglePopup() {
@@ -97,7 +131,6 @@ document.addEventListener("DOMContentLoaded", function () {
     backButton.forEach((button) => {
       button.style.display = "inline-block";
     });
-    showEndButton();
     updateChatHeaderTitle();
   }
 
@@ -207,13 +240,11 @@ document.addEventListener("DOMContentLoaded", function () {
     if (type === "user") {
       imageSrc = "./assets/user.png";
     } else if (type === "reply") {
-      imageSrc =
-        chatMode === "openai" ? "./assets/bot.png" : "./assets/admin.png";
+      imageSrc = chatMode === "openai" ? "./assets/bot.png" : "./assets/admin.png";
     }
 
     const previousMessage = chatMessages.lastElementChild;
-    const isSameSender =
-      previousMessage && previousMessage.classList.contains(type);
+    const isSameSender = previousMessage && previousMessage.classList.contains(type);
 
     if (isSameSender) {
       const previousIcon = previousMessage.querySelector(".bubble-icon");
@@ -251,9 +282,7 @@ document.addEventListener("DOMContentLoaded", function () {
     chatMode = "agent";
     updateCurrentConversationStatus("Live Agent");
     resetChatMessages();
-    reply(
-      "You have been transferred to a real agent. Please start your conversation."
-    );
+    reply("You have been transferred to a real agent. Please start your conversation.");
     chatInput.value = "";
     chatInput.focus();
     updateConversationList();
@@ -267,8 +296,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function resumeConversation(index) {
     currentConversationIndex = index;
-    chatMode =
-      conversationHistory[index].status === "OpenAI" ? "openai" : "agent";
+    chatMode = conversationHistory[index].status === "OpenAI" ? "openai" : "agent";
     startConversation();
     resetChatMessages();
     conversationHistory[index].messages.forEach((message) =>
@@ -277,11 +305,9 @@ document.addEventListener("DOMContentLoaded", function () {
     if (conversationHistory[index].active) {
       chatInputContainer.classList.remove("hidden");
       chatEndedMessage.classList.add("hidden");
-      showEndButton();
     } else {
       chatInputContainer.classList.add("hidden");
       chatEndedMessage.classList.remove("hidden");
-      hideEndButton();
     }
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
@@ -293,7 +319,6 @@ document.addEventListener("DOMContentLoaded", function () {
       saveConversationHistory();
       chatInputContainer.classList.add("hidden");
       chatEndedMessage.classList.remove("hidden");
-      hideEndButton();
       resetToLandingPage();
       checkActiveConversations();
     }
@@ -306,12 +331,13 @@ document.addEventListener("DOMContentLoaded", function () {
     chatInputContainer.classList.add("hidden");
     chatEndedMessage.classList.add("hidden");
     userFormPage.classList.add("hidden");
+    const emailTranscriptPage = document.getElementById("email-transcript-page");
+    emailTranscriptPage.classList.add("hidden");
     chatMode = "openai";
     backButton.forEach((button) => {
       button.style.display = "none";
     });
     updateConversationList();
-    hideEndButton();
   }
 
   function updateConversationList() {
@@ -363,12 +389,8 @@ document.addEventListener("DOMContentLoaded", function () {
         <img src="${iconSrc}" alt="User Icon">
       </div>
       <div class="conversation-content">
-        <p class="conversation-status">${conversation.status} - ${
-      conversation.timestamp
-    }</p>
-        <p class="status-dot" data-status="${
-          conversation.active ? "active" : "inactive"
-        }">•</p>
+        <p class="conversation-status">${conversation.status} - ${conversation.timestamp}</p>
+        <p class="status-dot" data-status="${conversation.active ? 'active' : 'inactive'}">•</p>
       </div>
       <div class="conversation-action">
         <button class="btn-active" data-index="${index}">&gt;</button>
@@ -389,24 +411,6 @@ document.addEventListener("DOMContentLoaded", function () {
   function updateCurrentConversationStatus(status) {
     if (currentConversationIndex !== null) {
       conversationHistory[currentConversationIndex].status = status;
-    }
-  }
-
-  function showEndButton() {
-    if (!document.getElementById("end-conversation")) {
-      const endButton = document.createElement("button");
-      endButton.id = "end-conversation";
-      endButton.className = "btn-end";
-      endButton.textContent = "End Conversation";
-      endButton.addEventListener("click", endCurrentConversation);
-      chatHeader.appendChild(endButton);
-    }
-  }
-
-  function hideEndButton() {
-    const endButton = document.getElementById("end-conversation");
-    if (endButton) {
-      endButton.remove();
     }
   }
 
@@ -435,10 +439,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function saveConversationHistory() {
-    localStorage.setItem(
-      "conversationHistory",
-      JSON.stringify(conversationHistory)
-    );
+    localStorage.setItem("conversationHistory", JSON.stringify(conversationHistory));
   }
 
   function loadConversationHistory() {
@@ -474,13 +475,12 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function updateChatHeaderTitle() {
-    chatHeaderTitle.textContent =
-      chatMode === "openai" ? "OpenAI" : "Live Agent";
+    chatHeaderTitle.textContent = chatMode === "openai" ? "OpenAI" : "Live Agent";
   }
 
   async function fetchFAQSuggestions(query) {
     try {
-      const response = await fetch(`http://localhost:3001/faqs`);
+      const response = await fetch(`https://base-api-development.qbit.co.id/faqs`);
       const data = await response.json();
       const filteredResults = data.payload.results.filter((item) =>
         item.question.toLowerCase().includes(query)
@@ -536,5 +536,49 @@ document.addEventListener("DOMContentLoaded", function () {
   function clearSearchResults() {
     searchResultsContainer.innerHTML = "";
     searchResultsContainer.style.display = "none";
+  }
+
+  function scrollToLatest() {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    hideGoToLatestButton();
+  }
+
+  function showGoToLatestButton() {
+    goToLatestButton.classList.remove("hidden");
+    goToLatestButton.classList.add("visible");
+  }
+
+  function hideGoToLatestButton() {
+    goToLatestButton.classList.remove("visible");
+    goToLatestButton.classList.add("hidden");
+  }
+
+  function showEmailTranscriptPage() {
+    landingPage.classList.add("hidden");
+    userFormPage.classList.add("hidden");
+    chatHeader.classList.add("hidden");
+    chatMessages.classList.add("hidden");
+    chatInputContainer.classList.add("hidden");
+    chatEndedMessage.classList.add("hidden");
+    const emailTranscriptPage = document.getElementById("email-transcript-page");
+    emailTranscriptPage.classList.remove("hidden");
+
+    const email = localStorage.getItem("userEmail");
+
+    const emailInput = emailTranscriptPage.querySelector('input[type="email"]');
+    if (email) {
+        emailInput.value = email;
+    }
+    const transcriptForm = document.getElementById("transcript-form");
+    transcriptForm.addEventListener("submit", sendEmailTranscript);
+  }
+
+  function sendEmailTranscript(event) {
+    event.preventDefault();
+
+    const email = document.querySelector('#email-transcript-page input[type="email"]').value;
+
+    console.log(`Email Transcript akan dikirim ke: ${email}`);
+    resetToLandingPage();
   }
 });

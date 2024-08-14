@@ -87,8 +87,33 @@
             />
           </button>
           <h3 id="chat-header-title"></h3>
+          <div class="dropdown">
+            <button class="dropdown-toggle">
+              <img
+                src="./assets/more.svg"
+                alt="More"
+                style="width: 25px; height: 25px"
+              />
+            </button>
+            <div class="dropdown-menu hidden">
+              <button
+                id="end-conversation"
+                class="dropdown-item dropdown-item-1"
+              >
+                End Conversation
+              </button>
+              <button
+                id="email-transcript"
+                class="dropdown-item dropdown-item-2"
+              >
+                Email Transcript
+              </button>
+            </div>
+          </div>
         </div>
-        <div id="chat-messages" class="chat-messages hidden"></div>
+
+        <div id="chat-messages" class="chat-messages hidden">
+        </div>
         <div id="chat-input-container" class="chat-input-container hidden">
           <input
             type="text"
@@ -97,9 +122,33 @@
             placeholder="Type your message..."
           />
           <button id="chat-submit" class="chat-submit">Send</button>
+          <button id="go-to-latest" class="go-to-latest hidden">
+            Go to Latest
+          </button>
         </div>
         <div id="chat-ended-message" class="chat-ended-message hidden">
           <p>Chat has ended</p>
+        </div>
+        <div id="email-transcript-page" class="hidden">
+          <div class="chat-header">
+            <button id="back-to-landing" class="back-button">
+              <img
+                src="./assets/arrow.svg"
+                alt="Back"
+                style="width: 20px; height: 20px"
+              />
+            </button>
+            <h3>Email Transcript</h3>
+          </div>
+          <div class="chat-messages">
+            <form id="transcript-form" class="user-form">
+              <div>
+                <label for="email">Your chat transcript will be sent here:</label>
+                <input type="email" required />
+              </div>
+              <button type="submit" class="send-email">Send</button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
