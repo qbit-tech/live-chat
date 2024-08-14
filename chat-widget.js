@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", function () {
+window.onload = function () {
   const chatInput = document.getElementById("chat-input");
   const chatSubmit = document.getElementById("chat-submit");
   const chatMessages = document.getElementById("chat-messages");
@@ -79,7 +79,9 @@ document.addEventListener("DOMContentLoaded", function () {
     endConversationButton.addEventListener("click", endCurrentConversation);
 
     chatMessages.addEventListener("scroll", function () {
-      const atBottom = chatMessages.scrollHeight - chatMessages.scrollTop === chatMessages.clientHeight;
+      const atBottom =
+        chatMessages.scrollHeight - chatMessages.scrollTop ===
+        chatMessages.clientHeight;
 
       if (atBottom) {
         hideGoToLatestButton();
@@ -616,5 +618,4 @@ document.addEventListener("DOMContentLoaded", function () {
       chatEndedMessage.classList.remove("hidden");
     }
   }
-
-});
+};
