@@ -65,7 +65,7 @@
               <p id="faq-answer"></p>
             </div>
           </div>
-        </div>        
+        </div>
         <div id="user-form-page" class="hidden">
           <div class="chat-header">
             <button id="back-to-landing" class="back-button">
@@ -78,23 +78,57 @@
             <h3>User Information</h3>
           </div>
           <div class="chat-messages">
-            <form id="conversation-form" class="user-form">
+            <div id="user-info-confirmation" class="hidden">
               <div>
-                <label for="name">Name:</label>
-                <input type="text" id="name" name="name" required />
+                <p>Are you :</p>
+                <h2 id="user-name-display"></h2>
               </div>
               <div>
-                <label for="email">Email:</label>
-                <input type="email" id="email" name="email" required />
+                <label for="message-confirmation">Message:</label>
+                <textarea
+                  id="message-confirmation"
+                  name="message"
+                  rows="3"
+                  required
+                ></textarea>
               </div>
-              <div>
-                <label for="phone">Phone:</label>
-                <input type="tel" id="phone" name="phone" required />
-              </div>
-              <button type="submit" class="btn-start-chat">Start Chat</button>
-            </form>
+              <button type="submit" class="btn-start-chat" id="start-chat">
+                Start Chat
+              </button>
+              <button type="button" class="btn-edit" id="edit-info">
+                Edit
+              </button>
+            </div>
+
+            <div class="user-form hidden">
+              <form id="conversation-form">
+                <div>
+                  <label for="name">Name:</label>
+                  <input type="text" id="name" name="name" required />
+                </div>
+                <div>
+                  <label for="email">Email:</label>
+                  <input type="email" id="email" name="email" required />
+                </div>
+                <div>
+                  <label for="phone">Phone:</label>
+                  <input type="tel" id="phone" name="phone" required />
+                </div>
+                <div>
+                  <label for="message">Message:</label>
+                  <textarea
+                    id="message"
+                    name="message"
+                    rows="3"
+                    required
+                  ></textarea>
+                </div>
+                <button type="submit" class="btn-start-chat">Start Chat</button>
+              </form>
+            </div>
           </div>
         </div>
+
         <div id="chat-header" class="chat-header hidden">
           <button id="back-to-landing" class="back-button">
             <img
@@ -113,11 +147,8 @@
               />
             </button>
             <div class="dropdown-menu hidden">
-              <button
-                id="end-conversation"
-                class="dropdown-item dropdown-item-1"
-              >
-                End Conversation
+              <button id="edit-profile" class="dropdown-item dropdown-item-1">
+                Edit Profile
               </button>
               <button
                 id="email-transcript"
@@ -125,12 +156,17 @@
               >
                 Email Transcript
               </button>
+              <button
+                id="end-conversation"
+                class="dropdown-item dropdown-item-3"
+              >
+                End Conversation
+              </button>
             </div>
           </div>
         </div>
 
-        <div id="chat-messages" class="chat-messages hidden">
-        </div>
+        <div id="chat-messages" class="chat-messages hidden"></div>
         <div id="chat-input-container" class="chat-input-container hidden">
           <input
             type="text"
@@ -146,6 +182,39 @@
         <div id="chat-ended-message" class="chat-ended-message hidden">
           <p>Chat has ended</p>
         </div>
+
+        <div id="edit-user-page" class="hidden">
+          <div class="chat-header">
+            <button id="back-to-chat-edit" class="back-button">
+              <img
+                src="./assets/arrow.svg"
+                alt="Back"
+                style="width: 20px; height: 20px"
+              />
+            </button>
+            <h3>Edit Profile</h3>
+          </div>
+          <div class="chat-messages">
+            <div class="user-edit">
+              <form id="edit-form">
+                <div>
+                  <label for="edit-name">Name:</label>
+                  <input type="text" id="edit-name" name="name" required />
+                </div>
+                <div>
+                  <label for="edit-email">Email:</label>
+                  <input type="email" id="edit-email" name="email" required />
+                </div>
+                <div>
+                  <label for="edit-phone">Phone:</label>
+                  <input type="tel" id="edit-phone" name="phone" required />
+                </div>
+                <button type="submit" class="edit-user">Save</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
         <div id="email-transcript-page" class="hidden">
           <div class="chat-header">
             <button id="back-to-chat" class="back-button">
