@@ -74,7 +74,7 @@ body {
   transition: transform 0.3s ease, opacity 0.3s ease;
   transform: translate(50%, 50%) scale(0.5);
   opacity: 0;
-  height: 65vh;
+  height: 70vh;
   z-index: 999;
 }
 
@@ -341,6 +341,7 @@ body {
 .conversation-action .btn-active {
   background-color: var(--color-primary);
   border: none;
+  margin-right: 10px;
   color: var(--color-icon);
   padding: 0.5rem;
   border-radius: 0.375rem;
@@ -382,6 +383,7 @@ body {
 
 .new-conversation {
   width: 90%;
+  margin-bottom: 1rem;
 }
 
 .new-conversation button {
@@ -803,4 +805,48 @@ body {
   height: 100%;
   overflow-x: hidden;
   padding: 1rem;
+}
+
+#chat-bubble.hidden {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .chat-popup {
+    width: 100%;
+    height: 100vh;
+    bottom: 0;
+    right: 0;
+    border-radius: 0;
+  }
+
+  .chat-header {
+    border-radius: 0;
+  }
+
+  .chat-input-container {
+    border-radius: 0;
+  }
+
+  .landing-header {
+    height: 10rem;
+    border-radius: 0px;
+  }
+
+  .landing-header h2 {
+    font-size: 2rem;
+  }
+
+  .landing-header p {
+    font-size: 0.75rem;
+  }
+
+  .search-box {
+    margin-top: -1rem;
+    height: 3rem;
+  }
+
+  .conversation-list{
+    height: 50vh;
+  }
 }

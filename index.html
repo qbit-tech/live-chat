@@ -23,6 +23,13 @@
       </div>
       <div id="chat-popup" class="chat-popup hidden">
         <div id="landing-page" class="landing-page">
+          <button id="close-chat-popup" class="back-button">
+            <img
+              src="./assets/close.svg"
+              alt="Close"
+              style="width: 20px; height: 20px"
+            />
+          </button>
           <div class="landing-header">
             <h2>Hi there <span role="img" aria-label="wave">👋</span></h2>
             <p>
@@ -40,11 +47,16 @@
                 <img src="./assets/bot.png" alt="bot Icon" />
               </div>
               <div class="conversation-action">
-                <button class="btn-active" id="start-conversation">></button>
+                <button class="btn-active" id="start-conversation">
+                  <img
+                    src="./assets/next.svg"
+                    alt="Close"
+                    style="width: 20px; height: 20px"
+                  />
+                </button>
               </div>
             </div>
           </div>
-
           <div class="new-conversation">
             <button id="new-conversation">New Conversation</button>
           </div>
@@ -99,7 +111,6 @@
                 Edit
               </button>
             </div>
-
             <div class="user-form hidden">
               <form id="conversation-form">
                 <div>
@@ -128,7 +139,6 @@
             </div>
           </div>
         </div>
-
         <div id="chat-header" class="chat-header hidden">
           <button id="back-to-landing" class="back-button">
             <img
@@ -165,7 +175,6 @@
             </div>
           </div>
         </div>
-
         <div id="chat-messages" class="chat-messages hidden"></div>
         <div id="chat-input-container" class="chat-input-container hidden">
           <input
@@ -182,7 +191,6 @@
         <div id="chat-ended-message" class="chat-ended-message hidden">
           <p>Chat has ended</p>
         </div>
-
         <div id="edit-user-page" class="hidden">
           <div class="chat-header">
             <button id="back-to-chat-edit" class="back-button">
@@ -214,7 +222,6 @@
             </div>
           </div>
         </div>
-
         <div id="email-transcript-page" class="hidden">
           <div class="chat-header">
             <button id="back-to-chat" class="back-button">
@@ -229,7 +236,9 @@
           <div class="chat-messages">
             <form id="transcript-form" class="user-form">
               <div>
-                <label for="email">Your chat transcript will be sent here:</label>
+                <label for="email"
+                  >Your chat transcript will be sent here:</label
+                >
                 <input type="email" required />
               </div>
               <button type="submit" class="btn-start-chat">Send</button>

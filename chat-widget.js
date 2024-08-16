@@ -28,7 +28,61 @@ window.onload = function () {
     backToChatEditButton: document.getElementById("back-to-chat-edit"),
     editUserPage: document.getElementById("edit-user-page"),
     editForm: document.getElementById("edit-form"),
+    closeChatPopupButton: document.getElementById("close-chat-popup")
   };
+
+  handleResize();
+
+  window.addEventListener("resize", handleResize);
+
+  chatElements.closeChatPopupButton.addEventListener("click", closeChatPopup);
+
+  function handleResize() {
+    if (window.innerWidth <= 768) {
+      chatElements.closeChatPopupButton.style.display = "block";
+    } else {
+      chatElements.closeChatPopupButton.style.display = "none";
+    }
+  }
+
+  function togglePopup() {
+    if (chatElements.chatPopup.classList.contains("visible")) {
+      closeChatPopup();
+    } else {
+      openChatPopup();
+    }
+  }
+
+  function openChatPopup() {
+    chatElements.chatPopup.classList.remove("hidden");
+    chatElements.chatPopup.classList.add("visible");
+    chatElements.chatIcon.style.transform = "rotate(180deg)";
+    chatElements.chatIcon.src = "./assets/delete.svg";
+    chatElements.chatInput.focus();
+    if (window.innerWidth <= 768) {
+      chatElements.chatBubble.classList.add("hidden");
+    }
+  }
+
+  function closeChatPopup() {
+    chatElements.chatIcon.style.transform = "rotate(0)";
+    chatElements.chatIcon.src = "./assets/customer-service.svg";
+    chatElements.chatPopup.classList.add("closing");
+    chatElements.chatPopup.addEventListener("animationend", onPopupCloseAnimationEnd, {
+      once: true,
+    });
+    if (window.innerWidth <= 768) {
+      chatElements.chatBubble.classList.remove("hidden");
+    }
+  }
+
+  function onPopupCloseAnimationEnd() {
+    if (chatElements.chatPopup.classList.contains("closing")) {
+      chatElements.chatPopup.classList.remove("visible", "closing");
+      chatElements.chatPopup.classList.add("hidden");
+      resetToLandingPage();
+    }
+  }
 
   const searchInput = document.querySelector(".search-box input");
   const searchResultsContainer = document.createElement("div");
@@ -116,6 +170,9 @@ window.onload = function () {
     chatElements.chatIcon.style.transform = "rotate(180deg)";
     chatElements.chatIcon.src = "./assets/delete.svg";
     chatElements.chatInput.focus();
+    if (window.innerWidth <= 768) {
+      chatElements.chatBubble.classList.add("hidden");
+    }
   }
 
   function closeChatPopup() {
@@ -125,6 +182,9 @@ window.onload = function () {
     chatElements.chatPopup.addEventListener("animationend", onPopupCloseAnimationEnd, {
       once: true,
     });
+    if (window.innerWidth <= 768) {
+      chatElements.chatBubble.classList.remove("hidden");
+    }
   }
 
   function onPopupCloseAnimationEnd() {
@@ -414,7 +474,13 @@ window.onload = function () {
         <p class="status-dot" data-status="${conversation.active ? "active" : "inactive"}">•</p>
       </div>
       <div class="conversation-action">
-        <button class="btn-active" data-index="${index}">&gt;</button>
+        <button class="btn-active" data-index="${index}">
+          <img
+            src="./assets/next.svg"
+            alt="Close"
+            style="width: 20px; height: 20px"
+          />
+        </button>
       </div>
     `;
     return conversationItem;
