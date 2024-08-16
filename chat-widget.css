@@ -74,7 +74,7 @@ body {
   transition: transform 0.3s ease, opacity 0.3s ease;
   transform: translate(50%, 50%) scale(0.5);
   opacity: 0;
-  height: 50vh;
+  height: 70vh;
   z-index: 999;
 }
 
@@ -113,7 +113,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  height: 1.5rem;
+  height: 2.5rem;
   background-color: var(--color-primary);
   color: var(--color-icon);
   border-top-left-radius: 1rem;
@@ -143,7 +143,7 @@ body {
 
 .chat-messages {
   flex: 1;
-  padding: 1rem;
+  padding: 1.5rem;
   overflow-y: auto;
 }
 
@@ -245,8 +245,8 @@ body {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  max-width: 100%;
-  height: 60vh;
+  width: 100%;
+  height: 100%;
   box-sizing: border-box;
   background-color: var(--color-secondary-dark);
   border-radius: 1rem;
@@ -277,13 +277,13 @@ body {
 }
 
 .conversation-list {
-  width: 95%;
+  width: 90%;
   margin-bottom: 1rem;
   max-height: 50vh;
   overflow-y: auto;
   background-color: var(--color-secondary);
   border-radius: 0.5rem;
-  height: 9.6rem;
+  height: 32vh;
   position: relative;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1), 0px 1px 3px rgba(0, 0, 0, 0.08);
 }
@@ -341,6 +341,7 @@ body {
 .conversation-action .btn-active {
   background-color: var(--color-primary);
   border: none;
+  margin-right: 10px;
   color: var(--color-icon);
   padding: 0.5rem;
   border-radius: 0.375rem;
@@ -351,10 +352,10 @@ body {
   display: flex;
   margin: 1rem;
   margin-top: -2rem;
-  width: 95%;
+  width: 90%;
   height: 50px;
-  box-shadow: -5px -5px 10px rgba(0, 0, 0, 0.1), 5px 5px 10px rgba(0, 0, 0, 0.1),
-    0px 0px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: -5px -5px 10px rgba(0, 0, 0, 0.1),
+    5px 5px 10px rgba(0, 0, 0, 0.1), 0px 0px 15px rgba(0, 0, 0, 0.2);
   transition: box-shadow 0.3s ease;
   border-radius: 0.375rem;
 }
@@ -382,10 +383,7 @@ body {
 
 .new-conversation {
   width: 90%;
-  background-color: var(--color-secondary);
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1), 0px 1px 3px rgba(0, 0, 0, 0.08);
+  margin-bottom: 1rem;
 }
 
 .new-conversation button {
@@ -398,11 +396,11 @@ body {
   border: none;
   cursor: pointer;
   transition: background-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1), 0px 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .new-conversation button:hover:not(.disabled) {
   background-color: var(--color-primary-dark);
-  transform: translateY(-3px);
 }
 
 .new-conversation button:active:not(.disabled) {
@@ -465,8 +463,8 @@ body {
 .search-results-container {
   position: absolute;
   background-color: var(--color-secondary);
-  box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.1), 4px 4px 8px rgba(0, 0, 0, 0.1),
-    0px 8px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.1),
+    4px 4px 8px rgba(0, 0, 0, 0.1), 0px 8px 12px rgba(0, 0, 0, 0.15);
   border-radius: 0.375rem;
   margin-top: 3.3rem;
   max-height: 15rem;
@@ -542,9 +540,11 @@ body {
 
 .user-form {
   display: flex;
+  width: 100%;
   flex-direction: column;
-  align-items: flex-start;
-  margin: 1rem;
+  align-items: center;
+  justify-content: center;
+  margin: 1rem 1rem;
 }
 
 .user-form div {
@@ -564,17 +564,19 @@ body {
   border: 1px solid var(--color-tertiary);
 }
 
-.btn-start-chat {
+.btn-start-chat, .btn-edit {
   background-color: var(--color-primary);
   width: 20rem;
   color: var(--color-icon);
   border: none;
-  margin-top: 1rem;
+  margin: 1rem auto;
   padding: 0.75rem 1.5rem;
   border-radius: 0.375rem;
   cursor: pointer;
   align-self: center;
   transition: background-color 0.3s ease, transform 0.2s ease;
+  display: block;
+  text-align: center;
 }
 
 .btn-start-chat:hover {
@@ -584,6 +586,19 @@ body {
 .btn-start-chat:active {
   transform: translateY(1px);
   background-color: var(--color-primary-darker);
+}
+
+.btn-edit {
+  background-color: var(--color-clear);
+}
+
+.btn-edit:hover {
+  background-color: var(--color-clear-hover);
+}
+
+.btn-edit:active {
+  transform: translateY(1px);
+  background-color: var(--color-clear-active);
 }
 
 .dropdown {
@@ -679,6 +694,10 @@ body {
   animation: rotateX 300ms 50ms ease-in-out forwards;
 }
 
+.dropdown.open .dropdown-item-3 {
+  animation: rotateX 300ms 150ms ease-in-out forwards;
+}
+
 .go-to-latest {
   position: fixed;
   bottom: 4.5rem;
@@ -704,4 +723,130 @@ body {
 .go-to-latest.visible {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+#user-form-page .chat-messages,
+#edit-user-page .chat-messages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+}
+
+#message-confirmation {
+  display: flex;
+}
+
+.user-form textarea,
+#message-confirmation {
+  padding: 0.5rem;
+  width: 19rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--color-tertiary);
+  resize: none;
+  height: 5rem;
+}
+
+.user-edit {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 1rem 1rem;
+}
+
+.user-edit div {
+  margin-bottom: 1rem;
+}
+
+.user-edit label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.user-edit input {
+  padding: 0.5rem;
+  width: 19rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--color-tertiary);
+}
+
+.edit-user {
+  background-color: var(--color-primary);
+  width: 20rem;
+  color: var(--color-icon);
+  border: none;
+  margin: 1rem auto;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  align-self: center;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  display: block;
+  text-align: center;
+}
+
+.edit-user:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.edit-user:active {
+  transform: translateY(1px);
+  background-color: var(--color-primary-darker);
+}
+
+#email-transcript-page .chat-messages {
+  display: flex;
+  justify-items: center;
+  align-items: center;
+  height: 100%;
+  overflow-x: hidden;
+  padding: 1rem;
+}
+
+#chat-bubble.hidden {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .chat-popup {
+    width: 100%;
+    height: 100vh;
+    bottom: 0;
+    right: 0;
+    border-radius: 0;
+  }
+
+  .chat-header {
+    border-radius: 0;
+  }
+
+  .chat-input-container {
+    border-radius: 0;
+  }
+
+  .landing-header {
+    height: 10rem;
+    border-radius: 0px;
+  }
+
+  .landing-header h2 {
+    font-size: 2rem;
+  }
+
+  .landing-header p {
+    font-size: 0.75rem;
+  }
+
+  .search-box {
+    margin-top: -1rem;
+    height: 3rem;
+  }
+
+  .conversation-list{
+    height: 50vh;
+  }
 }
