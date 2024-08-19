@@ -1156,3 +1156,6 @@ export default class QLiveChatWidget {
     }
   }
 }
+
+// Tambahkan QLiveChatWidget ke global scope (window)
+window.QLiveChatWidget = QLiveChatWidget;
