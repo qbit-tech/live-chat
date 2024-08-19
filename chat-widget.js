@@ -1,318 +1,636 @@
-window.onload = function () {
-  const chatElements = {
-    chatInput: document.getElementById("chat-input"),
-    chatSubmit: document.getElementById("chat-submit"),
-    chatMessages: document.getElementById("chat-messages"),
-    chatBubble: document.getElementById("chat-bubble"),
-    chatPopup: document.getElementById("chat-popup"),
-    chatIcon: document.getElementById("chat-icon"),
-    landingPage: document.getElementById("landing-page"),
-    startConversationButton: document.getElementById("start-conversation"),
-    newConversationButton: document.getElementById("new-conversation"),
-    chatHeader: document.getElementById("chat-header"),
-    chatHeaderTitle: document.getElementById("chat-header-title"),
-    chatInputContainer: document.getElementById("chat-input-container"),
-    chatEndedMessage: document.getElementById("chat-ended-message"),
-    backButton: document.querySelectorAll("#back-to-landing"),
-    conversationList: document.querySelector(".conversation-list"),
-    userFormPage: document.getElementById("user-form-page"),
-    conversationForm: document.getElementById("conversation-form"),
-    goToLatestButton: document.getElementById("go-to-latest"),
-    emailTranscriptButton: document.getElementById("email-transcript"),
-    backToChatButton: document.getElementById("back-to-chat"),
-    faqAnswerPage: document.getElementById("faq-answer-page"),
-    faqQuestionElement: document.getElementById("faq-question"),
-    faqAnswerElement: document.getElementById("faq-answer"),
-    backToSearchButton: document.getElementById("back-to-search"),
-    editProfileButton: document.getElementById("edit-profile"),
-    backToChatEditButton: document.getElementById("back-to-chat-edit"),
-    editUserPage: document.getElementById("edit-user-page"),
-    editForm: document.getElementById("edit-form"),
-    closeChatPopupButton: document.getElementById("close-chat-popup")
-  };
-
-  handleResize();
-
-  window.addEventListener("resize", handleResize);
-
-  chatElements.closeChatPopupButton.addEventListener("click", closeChatPopup);
-
-  function handleResize() {
-    if (window.innerWidth <= 768) {
-      chatElements.closeChatPopupButton.style.display = "block";
-    } else {
-      chatElements.closeChatPopupButton.style.display = "none";
-    }
+export default class QLiveChatWidget {
+  constructor(config) {
+    this.config = config;
+    this.chatMode = "openai";
+    this.conversationHistory = [];
+    this.currentConversationIndex = null;
   }
 
-  function togglePopup() {
-    if (chatElements.chatPopup.classList.contains("visible")) {
-      closeChatPopup();
-    } else {
-      openChatPopup();
-    }
+  init() {
+    this.loadAssets();
+    this.setupWidget();
+    this.loadConversationHistory();
+    this.addEventListeners();
+    this.checkActiveConversations();
   }
 
-  function openChatPopup() {
-    chatElements.chatPopup.classList.remove("hidden");
-    chatElements.chatPopup.classList.add("visible");
-    chatElements.chatIcon.style.transform = "rotate(180deg)";
-    chatElements.chatIcon.src = "./assets/delete.svg";
-    chatElements.chatInput.focus();
-    if (window.innerWidth <= 768) {
-      chatElements.chatBubble.classList.add("hidden");
-    }
+  loadAssets() {
+    this.appendLinkToHead("./chat-widget.css");
   }
 
-  function closeChatPopup() {
-    chatElements.chatIcon.style.transform = "rotate(0)";
-    chatElements.chatIcon.src = "./assets/customer-service.svg";
-    chatElements.chatPopup.classList.add("closing");
-    chatElements.chatPopup.addEventListener("animationend", onPopupCloseAnimationEnd, {
-      once: true,
+  appendLinkToHead(href) {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = href;
+    document.head.appendChild(link);
+  }
+
+  setupWidget() {
+    this.createChatWidgetContainer();
+    this.cacheChatElements();
+    this.handleResize();
+    window.addEventListener("resize", this.handleResize.bind(this));
+  }
+
+  createChatWidgetContainer() {
+    const chatWidgetContainer = document.createElement("div");
+    chatWidgetContainer.id = "chat-widget-container";
+    chatWidgetContainer.innerHTML = this.getChatWidgetHTML();
+    document.body.appendChild(chatWidgetContainer);
+  }
+
+  getChatWidgetHTML() {
+    return `
+      <div id="chat-bubble" class="chat-bubble">
+        <img id="chat-icon" src="./assets/customer-service.svg" alt="Chat Bubble" width="40" height="40" />
+      </div>
+      <div id="chat-popup" class="chat-popup hidden">
+        ${this.getLandingPageHTML()}
+        ${this.getFAQAnswerPageHTML()}
+        ${this.getUserFormPageHTML()}
+        ${this.getChatHeaderHTML()}
+        ${this.getChatMessagesHTML()}
+        ${this.getEditUserPageHTML()}
+        ${this.getEmailTranscriptPageHTML()}
+      </div>
+    `;
+  }
+
+  getLandingPageHTML() {
+    return `
+      <div id="landing-page" class="landing-page">
+        <div class="landing-header">
+          <div id="close-chat-popup" class="back-button">
+            <img src="./assets/close.svg" alt="Close" width="20" height="20" />
+            </div>
+            <h2>Hi there <span role="img" aria-label="wave">👋</span></h2>
+            <p>Need help? Search our help center for answers or start a conversation:</p>
+        </div>
+        <div class="search-box">
+          <input type="text" placeholder="Search for answers" />
+          <button class="search-button">Search</button>
+          <div class="search-results-container"></div>
+        </div>
+        <div class="conversation-list"></div>
+        <div class="new-conversation">
+          <button id="new-conversation">New Conversation</button>
+        </div>
+      </div>
+    `;
+  }
+
+  getFAQAnswerPageHTML() {
+    return `
+      <div id="faq-answer-page" class="faq-answer-page hidden">
+        <div class="chat-header">
+          <button id="back-to-search" class="back-button">
+            <img src="./assets/arrow.svg" alt="Back" width="20" height="20" />
+          </button>
+          <h3 id="faq-question"></h3>
+        </div>
+        <div class="chat-messages">
+          <div class="faq-answer">
+            <p id="faq-answer"></p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  getUserFormPageHTML() {
+    return `
+      <div id="user-form-page" class="form-page hidden">
+        <div class="chat-header">
+          <button id="back-to-landing" class="back-button">
+            <img src="./assets/arrow.svg" alt="Back" width="20" height="20" />
+          </button>
+          <h3>User Information</h3>
+        </div>
+        <div class="chat-messages">
+          ${this.getUserInfoConfirmationHTML()}
+          ${this.getUserFormHTML()}
+        </div>
+      </div>
+    `;
+  }
+
+  getUserInfoConfirmationHTML() {
+    return `
+      <div id="user-info-confirmation" class="hidden">
+        <div>
+          <p>Are you :</p>
+          <h2 id="user-name-display"></h2>
+        </div>
+        <div>
+          <label for="message-confirmation">Message:</label>
+          <textarea id="message-confirmation" name="message" rows="3" required></textarea>
+        </div>
+        <button type="submit" class="btn-start-chat" id="start-chat">Start Chat</button>
+        <button type="button" class="btn-edit" id="edit-info">Edit</button>
+      </div>
+    `;
+  }
+
+  getUserFormHTML() {
+    return `
+      <div class="user-form hidden">
+        <form id="conversation-form">
+          <div>
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" required />
+          </div>
+          <div>
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required />
+          </div>
+          <div>
+            <label for="phone">Phone:</label>
+            <input type="tel" id="phone" name="phone" required />
+          </div>
+          <div>
+            <label for="message">Message:</label>
+            <textarea id="message" name="message" rows="3" required></textarea>
+          </div>
+          <button type="submit" class="btn-start-chat">Start Chat</button>
+        </form>
+      </div>
+    `;
+  }
+
+  getChatHeaderHTML() {
+    return `
+      <div id="chat-header" class="chat-header hidden">
+        <button id="back-to-landing" class="back-button">
+          <img src="./assets/arrow.svg" alt="Back" width="20" height="20" />
+        </button>
+        <h3 id="chat-header-title"></h3>
+        ${this.getDropdownHTML()}
+      </div>
+    `;
+  }
+
+  getDropdownHTML() {
+    return `
+      <div class="dropdown">
+        <button class="dropdown-toggle">
+          <img src="./assets/more.svg" alt="More" width="25" height="25" />
+        </button>
+        <div class="dropdown-menu hidden">
+          <button id="edit-profile" class="dropdown-item dropdown-item-1">Edit Profile</button>
+          <button id="email-transcript" class="dropdown-item dropdown-item-2">Email Transcript</button>
+          <button id="end-conversation" class="dropdown-item dropdown-item-3">End Conversation</button>
+        </div>
+      </div>
+    `;
+  }
+
+  getChatMessagesHTML() {
+    return `
+      <div id="chat-messages" class="chat-messages hidden"></div>
+      <div id="chat-input-container" class="chat-input-container hidden">
+        <input type="text" id="chat-input" class="chat-input" placeholder="Type your message..." />
+        <button id="chat-submit" class="chat-submit">Send</button>
+        <button id="go-to-latest" class="go-to-latest hidden">Go to Latest</button>
+      </div>
+      <div id="chat-ended-message" class="chat-ended-message hidden">
+        <p>Chat has ended</p>
+      </div>
+    `;
+  }
+
+  getEditUserPageHTML() {
+    return `
+      <div id="edit-user-page" class="hidden">
+        <div class="chat-header">
+          <button id="back-to-chat-edit" class="back-button">
+            <img src="./assets/arrow.svg" alt="Back" width="20" height="20" />
+          </button>
+          <h3>Edit Profile</h3>
+        </div>
+        <div class="chat-messages">
+          ${this.getEditFormHTML()}
+        </div>
+      </div>
+    `;
+  }
+
+  getEditFormHTML() {
+    return `
+      <form id="edit-form" class="user-form">
+        <div>
+          <label for="edit-name">Name:</label>
+          <input type="text" id="edit-name" name="name" required />
+        </div>
+        <div>
+          <label for="edit-email">Email:</label>
+          <input type="email" id="edit-email" name="email" required />
+        </div>
+        <div>
+          <label for="edit-phone">Phone:</label>
+          <input type="tel" id="edit-phone" name="phone" required />
+        </div>
+        <button type="submit" class="edit-user">Save</button>
+      </form>
+    `;
+  }
+
+  getEmailTranscriptPageHTML() {
+    return `
+      <div id="email-transcript-page" class="hidden">
+        <div class="chat-header">
+          <button id="back-to-chat" class="back-button">
+            <img src="./assets/arrow.svg" alt="Back" width="20" height="20" />
+          </button>
+          <h3>Email Transcript</h3>
+        </div>
+        <div class="chat-messages">
+          ${this.getTranscriptFormHTML()}
+        </div>
+      </div>
+    `;
+  }
+
+  getTranscriptFormHTML() {
+    return `
+      <form id="transcript-form" class="user-form">
+        <div>
+          <label for="email">Your chat transcript will be sent here:</label>
+          <input type="email" required />
+        </div>
+        <button type="submit" class="btn-start-chat">Send</button>
+      </form>
+    `;
+  }
+
+  cacheChatElements() {
+    this.chatElements = {
+      chatInput: document.getElementById("chat-input"),
+      chatSubmit: document.getElementById("chat-submit"),
+      chatMessages: document.getElementById("chat-messages"),
+      chatBubble: document.getElementById("chat-bubble"),
+      chatPopup: document.getElementById("chat-popup"),
+      chatIcon: document.getElementById("chat-icon"),
+      landingPage: document.getElementById("landing-page"),
+      startConversationButton: document.getElementById("start-conversation"),
+      newConversationButton: document.getElementById("new-conversation"),
+      chatHeader: document.getElementById("chat-header"),
+      chatHeaderTitle: document.getElementById("chat-header-title"),
+      chatInputContainer: document.getElementById("chat-input-container"),
+      chatEndedMessage: document.getElementById("chat-ended-message"),
+      backButton: document.querySelectorAll("#back-to-landing"),
+      conversationList: document.querySelector(".conversation-list"),
+      userFormPage: document.getElementById("user-form-page"),
+      conversationForm: document.getElementById("conversation-form"),
+      goToLatestButton: document.getElementById("go-to-latest"),
+      emailTranscriptButton: document.getElementById("email-transcript"),
+      backToChatButton: document.getElementById("back-to-chat"),
+      faqAnswerPage: document.getElementById("faq-answer-page"),
+      faqQuestionElement: document.getElementById("faq-question"),
+      faqAnswerElement: document.getElementById("faq-answer"),
+      backToSearchButton: document.getElementById("back-to-search"),
+      editProfileButton: document.getElementById("edit-profile"),
+      backToChatEditButton: document.getElementById("back-to-chat-edit"),
+      editUserPage: document.getElementById("edit-user-page"),
+      editForm: document.getElementById("edit-form"),
+      closeChatPopupButton: document.getElementById("close-chat-popup"),
+      searchBox: document.querySelector(".search-box"),
+      endConversationButton: document.getElementById("end-conversation"),
+    };
+  }
+
+  addEventListeners() {
+    this.chatElements.chatBubble.addEventListener(
+      "click",
+      this.togglePopup.bind(this)
+    );
+    this.chatElements.closeChatPopupButton.addEventListener(
+      "click",
+      this.closeChatPopup.bind(this)
+    );
+    this.chatElements.newConversationButton.addEventListener(
+      "click",
+      this.showUserForm.bind(this)
+    );
+    this.chatElements.chatSubmit.addEventListener(
+      "click",
+      this.handleUserSubmit.bind(this)
+    );
+    this.chatElements.chatInput.addEventListener(
+      "keyup",
+      this.handleKeyUp.bind(this)
+    );
+    this.chatElements.conversationForm.addEventListener(
+      "submit",
+      this.handleFormSubmit.bind(this)
+    );
+    this.chatElements.goToLatestButton.addEventListener(
+      "click",
+      this.scrollToLatest.bind(this)
+    );
+    this.chatElements.emailTranscriptButton.addEventListener(
+      "click",
+      this.showEmailTranscriptPage.bind(this)
+    );
+    this.chatElements.backToSearchButton.addEventListener("click", () => {
+      this.chatElements.faqAnswerPage.classList.add("hidden");
+      this.chatElements.landingPage.classList.remove("hidden");
     });
-    if (window.innerWidth <= 768) {
-      chatElements.chatBubble.classList.remove("hidden");
-    }
-  }
 
-  function onPopupCloseAnimationEnd() {
-    if (chatElements.chatPopup.classList.contains("closing")) {
-      chatElements.chatPopup.classList.remove("visible", "closing");
-      chatElements.chatPopup.classList.add("hidden");
-      resetToLandingPage();
-    }
-  }
-
-  const searchInput = document.querySelector(".search-box input");
-  const searchResultsContainer = document.createElement("div");
-  searchResultsContainer.classList.add("search-results-container");
-  searchInput.parentNode.appendChild(searchResultsContainer);
-
-  let chatMode = "openai";
-  let conversationHistory = [];
-  let currentConversationIndex = null;
-
-  init();
-
-  function init() {
-    loadConversationHistory();
-    addEventListeners();
-    startChatFromConfirmation();
-    updateConversationList();
-  }
-
-  function addEventListeners() {
-    chatElements.chatBubble.addEventListener("click", togglePopup);
-    chatElements.startConversationButton.addEventListener("click", startConversation);
-    chatElements.newConversationButton.addEventListener("click", showUserForm);
-    chatElements.backButton.forEach((button) => {
-      button.addEventListener("click", resetToLandingPage);
+    this.chatElements.editProfileButton.addEventListener(
+      "click",
+      this.showEditProfile.bind(this)
+    );
+    this.chatElements.backToChatEditButton.addEventListener(
+      "click",
+      this.backToChatFromEdit.bind(this)
+    );
+    this.chatElements.backToChatButton.addEventListener(
+      "click",
+      this.backToChat.bind(this)
+    );
+    this.chatElements.editForm.addEventListener(
+      "submit",
+      this.saveProfileEdits.bind(this)
+    );
+    this.chatElements.backButton.forEach((button) => {
+      button.addEventListener("click", this.handleBackButton.bind(this));
     });
-    chatElements.chatSubmit.addEventListener("click", handleUserSubmit);
-    chatElements.chatInput.addEventListener("keyup", handleKeyUp);
-    chatElements.conversationForm.addEventListener("submit", handleFormSubmit);
-    searchInput.addEventListener("input", handleSearchInput);
 
     const dropdownToggle = document.querySelector(".dropdown-toggle");
-    const dropdownMenu = document.querySelector(".dropdown-menu");
+    dropdownToggle.addEventListener("click", this.toggleDropdown.bind(this));
+    document.addEventListener(
+      "click",
+      this.closeDropdownOnClickOutside.bind(this)
+    );
 
-    dropdownToggle.addEventListener("click", toggleDropdown);
-    document.addEventListener("click", closeDropdownOnClickOutside);
+    const searchInput = this.chatElements.searchBox.querySelector("input");
+    searchInput.addEventListener("input", this.handleSearchInput.bind(this));
 
-    const endConversationButton = document.getElementById("end-conversation");
-    endConversationButton.addEventListener("click", endCurrentConversation);
-
-    chatElements.chatMessages.addEventListener("scroll", handleChatScroll);
-    chatElements.goToLatestButton.addEventListener("click", scrollToLatest);
-
-    chatElements.emailTranscriptButton.addEventListener("click", showEmailTranscriptPage);
-
-    if (chatElements.backToChatButton) {
-      chatElements.backToChatButton.addEventListener("click", backToChat);
-    }
-
-    chatElements.editProfileButton.addEventListener("click", showEditProfile);
-    chatElements.backToChatEditButton.addEventListener("click", backToChatFromEdit);
-    chatElements.editForm.addEventListener("submit", saveProfileEdits);
+    this.chatElements.endConversationButton.addEventListener(
+      "click",
+      this.endCurrentConversation.bind(this)
+    );
   }
 
-  function startChatFromConfirmation() {
-    const startChatButton = document.getElementById("start-chat");
-    startChatButton.addEventListener("click", handleConfirmationStartChat, {
-      once: true,
-    });
-  }
-
-  function handleConfirmationStartChat() {
-    const startChatButton = document.getElementById("start-chat");
-    startChatButton.disabled = true;
-
-    const message = document.getElementById("message-confirmation").value;
-    startNewConversation(message);
-
-    setTimeout(() => {
-      startChatButton.disabled = false;
-    }, 2000);
-  }
-
-  function togglePopup() {
-    if (chatElements.chatPopup.classList.contains("visible")) {
-      closeChatPopup();
+  handleResize() {
+    if (window.innerWidth <= 768) {
+      this.chatElements.closeChatPopupButton.style.display = "block";
     } else {
-      openChatPopup();
+      this.chatElements.closeChatPopupButton.style.display = "none";
     }
   }
 
-  function openChatPopup() {
-    chatElements.chatPopup.classList.remove("hidden");
-    chatElements.chatPopup.classList.add("visible");
-    chatElements.chatIcon.style.transform = "rotate(180deg)";
-    chatElements.chatIcon.src = "./assets/delete.svg";
-    chatElements.chatInput.focus();
+  togglePopup() {
+    if (this.chatElements.chatPopup.classList.contains("visible")) {
+      this.closeChatPopup();
+    } else {
+      this.openChatPopup();
+    }
+  }
+
+  openChatPopup() {
+    this.chatElements.chatPopup.classList.remove("hidden");
+    this.chatElements.chatPopup.classList.add("visible");
+    this.chatElements.chatIcon.style.transform = "rotate(180deg)";
+    this.chatElements.chatIcon.src = "./assets/delete.svg";
+    this.chatElements.chatInput.focus();
     if (window.innerWidth <= 768) {
-      chatElements.chatBubble.classList.add("hidden");
+      this.chatElements.chatBubble.classList.add("hidden");
     }
   }
 
-  function closeChatPopup() {
-    chatElements.chatIcon.style.transform = "rotate(0)";
-    chatElements.chatIcon.src = "./assets/customer-service.svg";
-    chatElements.chatPopup.classList.add("closing");
-    chatElements.chatPopup.addEventListener("animationend", onPopupCloseAnimationEnd, {
-      once: true,
+  closeChatPopup() {
+    this.chatElements.chatIcon.style.transform = "rotate(0)";
+    this.chatElements.chatIcon.src = "./assets/customer-service.svg";
+    this.chatElements.chatPopup.classList.add("closing");
+    this.chatElements.chatPopup.addEventListener(
+      "animationend",
+      this.onPopupCloseAnimationEnd.bind(this),
+      { once: true }
+    );
+    if (window.innerWidth <= 768) {
+      this.chatElements.chatBubble.classList.remove("hidden");
+    }
+  }
+
+  onPopupCloseAnimationEnd() {
+    if (this.chatElements.chatPopup.classList.contains("closing")) {
+      this.chatElements.chatPopup.classList.remove("visible", "closing");
+      this.chatElements.chatPopup.classList.add("hidden");
+      this.resetToLandingPage();
+    }
+  }
+
+  loadConversationHistory() {
+    const savedHistory = localStorage.getItem("conversationHistory");
+    if (savedHistory) {
+      this.conversationHistory = JSON.parse(savedHistory);
+    }
+    this.updateConversationList();
+  }
+
+  saveConversationHistory() {
+    localStorage.setItem(
+      "conversationHistory",
+      JSON.stringify(this.conversationHistory)
+    );
+  }
+
+  clearConversationHistory() {
+    this.conversationHistory = [];
+    this.saveConversationHistory();
+    this.updateConversationList();
+  }
+
+  resetToLandingPage() {
+    this.chatElements.landingPage.classList.remove("hidden");
+    this.chatElements.chatHeader.classList.add("hidden");
+    this.chatElements.chatMessages.classList.add("hidden");
+    this.chatElements.chatInputContainer.classList.add("hidden");
+    this.chatElements.chatEndedMessage.classList.add("hidden");
+    this.chatElements.userFormPage.classList.add("hidden");
+    this.chatElements.editUserPage.classList.add("hidden");
+    const emailTranscriptPage = document.getElementById(
+      "email-transcript-page"
+    );
+    emailTranscriptPage.classList.add("hidden");
+    this.chatMode = "openai";
+    this.chatElements.backButton.forEach((button) => {
+      button.style.display = "none";
     });
-    if (window.innerWidth <= 768) {
-      chatElements.chatBubble.classList.remove("hidden");
-    }
+    this.updateConversationList();
   }
 
-  function onPopupCloseAnimationEnd() {
-    if (chatElements.chatPopup.classList.contains("closing")) {
-      chatElements.chatPopup.classList.remove("visible", "closing");
-      chatElements.chatPopup.classList.add("hidden");
-      resetToLandingPage();
+  handleBackButton() {
+    if (!this.chatElements.chatHeader.classList.contains("hidden")) {
+      this.resetToLandingPage();
+    } else {
+      this.chatElements.userFormPage.classList.add("hidden");
+      this.chatElements.editUserPage.classList.add("hidden");
+      this.chatElements.landingPage.classList.remove("hidden");
     }
+    this.chatElements.backButton.forEach((button) => {
+      button.style.display = "none";
+    });
   }
 
-  function showUserForm() {
+  showUserForm() {
     const name = localStorage.getItem("userName");
     const email = localStorage.getItem("userEmail");
     const phone = localStorage.getItem("userPhone");
 
     if (name && email && phone) {
       document.getElementById("user-name-display").textContent = name;
-
-      document.getElementById("user-info-confirmation").classList.remove("hidden");
+      document
+        .getElementById("user-info-confirmation")
+        .classList.remove("hidden");
       document.getElementById("conversation-form").classList.add("hidden");
     } else {
-      loadUserForm();
+      this.loadUserForm();
     }
 
-    chatElements.landingPage.classList.add("hidden");
-    chatElements.userFormPage.classList.remove("hidden");
-    chatElements.chatHeader.classList.add("hidden");
-    chatElements.chatMessages.classList.add("hidden");
-    chatElements.chatInputContainer.classList.add("hidden");
-    chatElements.backButton.forEach((button) => {
+    this.chatElements.landingPage.classList.add("hidden");
+    this.chatElements.userFormPage.classList.remove("hidden");
+    this.chatElements.chatHeader.classList.add("hidden");
+    this.chatElements.chatMessages.classList.add("hidden");
+    this.chatElements.chatInputContainer.classList.add("hidden");
+    this.chatElements.backButton.forEach((button) => {
       button.style.display = "inline-block";
     });
 
-    startChatFromConfirmation();
-
-    document.getElementById("edit-info").addEventListener("click", loadUserForm);
+    this.startChatFromConfirmation();
+    document
+      .getElementById("edit-info")
+      .addEventListener("click", this.loadUserForm.bind(this));
   }
 
-  function loadUserForm() {
+  loadUserForm() {
     document.getElementById("user-info-confirmation").classList.add("hidden");
     document.getElementById("conversation-form").classList.remove("hidden");
 
-    document.getElementById("name").value = localStorage.getItem("userName") || "";
-    document.getElementById("email").value = localStorage.getItem("userEmail") || "";
-    document.getElementById("phone").value = localStorage.getItem("userPhone") || "";
-
-    chatElements.conversationForm.addEventListener("submit", handleFormSubmit);
+    document.getElementById("name").value =
+      localStorage.getItem("userName") || "";
+    document.getElementById("email").value =
+      localStorage.getItem("userEmail") || "";
+    document.getElementById("phone").value =
+      localStorage.getItem("userPhone") || "";
   }
 
-  function handleFormSubmit(event) {
+  startChatFromConfirmation() {
+    const startChatButton = document.getElementById("start-chat");
+
+    startChatButton.removeEventListener(
+      "click",
+      this.handleConfirmationStartChat
+    );
+
+    startChatButton.addEventListener(
+      "click",
+      this.handleConfirmationStartChat.bind(this)
+    );
+  }
+
+  handleConfirmationStartChat() {
+    const message = document
+      .getElementById("message-confirmation")
+      .value.trim();
+
+    if (message) {
+      if (
+        !this.conversationHistory.some((conversation) => conversation.active)
+      ) {
+        this.startNewConversation(message);
+      } else {
+        console.log(
+          "There is already an active conversation. Please end the current conversation before starting a new one."
+        );
+      }
+    }
+  }
+
+  handleFormSubmit(event) {
     event.preventDefault();
     const name = document.getElementById("name").value;
     const email = document.getElementById("email").value;
     const phone = document.getElementById("phone").value;
     const message = document.getElementById("message").value;
 
-    saveFormValues(name, email, phone);
-    startNewConversation(message);
+    this.saveFormValues(name, email, phone);
+    this.startNewConversation(message);
   }
 
-  function saveFormValues(name, email, phone) {
+  saveFormValues(name, email, phone) {
     localStorage.setItem("userName", name);
     localStorage.setItem("userEmail", email);
     localStorage.setItem("userPhone", phone);
   }
 
-  function startNewConversation(initialMessage) {
-    resetChatMessages();
+  startNewConversation(initialMessage) {
+    this.resetChatMessages();
 
-    const timestamp = new Date().toLocaleString();
-    conversationHistory.push({
+    const timestamp = new Date().toISOString();
+    this.conversationHistory.push({
       status: "OpenAI",
       preview: "New conversation started...",
       timestamp,
       active: true,
       messages: [],
     });
-    currentConversationIndex = conversationHistory.length - 1;
-    startConversation();
-    reply("Hello! How can I assist you today?");
+    this.currentConversationIndex = this.conversationHistory.length - 1;
+    this.startConversation();
+    this.reply("Hello! How can I assist you today?");
     if (initialMessage) {
-      onUserRequest(initialMessage);
+      this.onUserRequest(initialMessage);
     }
-    updateConversationList();
-    saveConversationHistory();
-    checkActiveConversations();
+    this.updateConversationList();
+    this.saveConversationHistory();
+    this.checkActiveConversations();
   }
 
-  function startConversation() {
-    chatElements.landingPage.classList.add("hidden");
-    chatElements.userFormPage.classList.add("hidden");
-    chatElements.chatHeader.classList.remove("hidden");
-    chatElements.chatMessages.classList.remove("hidden");
-    chatElements.chatInputContainer.classList.remove("hidden");
-    chatElements.chatEndedMessage.classList.add("hidden");
-    chatElements.backButton.forEach((button) => {
+  startConversation() {
+    this.chatElements.landingPage.classList.add("hidden");
+    this.chatElements.userFormPage.classList.add("hidden");
+    this.chatElements.chatHeader.classList.remove("hidden");
+    this.chatElements.chatMessages.classList.remove("hidden");
+    this.chatElements.chatInputContainer.classList.remove("hidden");
+    this.chatElements.chatEndedMessage.classList.add("hidden");
+    this.chatElements.backButton.forEach((button) => {
       button.style.display = "inline-block";
     });
-    updateChatHeaderTitle();
+    this.updateChatHeaderTitle();
   }
 
-  function handleUserSubmit() {
-    const message = chatElements.chatInput.value.trim();
+  handleUserSubmit() {
+    const message = this.chatElements.chatInput.value.trim();
     if (!message) return;
-    chatElements.chatInput.value = "";
-    onUserRequest(message);
+    this.chatElements.chatInput.value = "";
+    this.onUserRequest(message);
   }
 
-  function handleKeyUp(event) {
+  handleKeyUp(event) {
     if (event.key === "Enter") {
-      chatElements.chatSubmit.click();
+      this.chatElements.chatSubmit.click();
     }
   }
 
-  function onUserRequest(message) {
-    appendMessage("user", message);
-    updateCurrentConversation(message, "user");
-    if (chatMode === "openai") {
+  onUserRequest(message) {
+    const messageTimestamp = new Date().toISOString();
+    this.appendMessage("user", message, messageTimestamp);
+    this.updateCurrentConversation(message, "user", messageTimestamp);
+    if (this.chatMode === "openai") {
       setTimeout(() => {
-        reply("Hello! This is a sample reply from OpenAI.");
-        offerRealAgentOption();
+        this.reply("Hello! This is a sample reply from OpenAI.");
+        this.offerRealAgentOption();
       }, 200);
     } else {
-      setTimeout(() => reply("You are now chatting with a real agent."), 200);
+      setTimeout(
+        () => this.reply("You are now chatting with a real agent."),
+        200
+      );
     }
   }
 
-  function appendMessage(type, content) {
+  appendMessage(type, content, timestamp) {
     const messageElement = document.createElement("div");
     messageElement.className = `message ${type}`;
 
@@ -320,11 +638,13 @@ window.onload = function () {
     if (type === "user") {
       imageSrc = "./assets/user.png";
     } else if (type === "reply") {
-      imageSrc = chatMode === "openai" ? "./assets/bot.png" : "./assets/admin.png";
+      imageSrc =
+        this.chatMode === "openai" ? "./assets/bot.png" : "./assets/admin.png";
     }
 
-    const previousMessage = chatElements.chatMessages.lastElementChild;
-    const isSameSender = previousMessage && previousMessage.classList.contains(type);
+    const previousMessage = this.chatElements.chatMessages.lastElementChild;
+    const isSameSender =
+      previousMessage && previousMessage.classList.contains(type);
 
     if (isSameSender) {
       const previousIcon = previousMessage.querySelector(".bubble-icon");
@@ -332,20 +652,22 @@ window.onload = function () {
     }
 
     messageElement.innerHTML = `
-      <div class="bubble">${content}</div>
-      <img src="${imageSrc}" alt="${type}" class="bubble-icon">
+      <div class="bubble" data-timestamp="${timestamp}">${content}</div>
+      <img src="${imageSrc}" alt="${type}" class="bubble-icon" width="30" height="30">
     `;
 
-    chatElements.chatMessages.appendChild(messageElement);
-    chatElements.chatMessages.scrollTop = chatElements.chatMessages.scrollHeight;
+    this.chatElements.chatMessages.appendChild(messageElement);
+    this.chatElements.chatMessages.scrollTop =
+      this.chatElements.chatMessages.scrollHeight;
   }
 
-  function reply(message) {
-    appendMessage("reply", message);
-    updateCurrentConversation(message, "reply");
+  reply(message) {
+    const messageTimestamp = new Date().toISOString();
+    this.appendMessage("reply", message, messageTimestamp);
+    this.updateCurrentConversation(message, "reply", messageTimestamp);
   }
 
-  function offerRealAgentOption() {
+  offerRealAgentOption() {
     const optionElement = document.createElement("div");
     optionElement.className = "message reply";
     optionElement.innerHTML = `
@@ -353,108 +675,97 @@ window.onload = function () {
         If you need further assistance, you can <button id="switch-agent" class="switch-agent-button">Chat with a real agent</button>.
       </div>
     `;
-    chatElements.chatMessages.appendChild(optionElement);
-    chatElements.chatMessages.scrollTop = chatElements.chatMessages.scrollHeight;
-    document.getElementById("switch-agent").addEventListener("click", switchToRealAgent);
+    this.chatElements.chatMessages.appendChild(optionElement);
+    this.chatElements.chatMessages.scrollTop =
+      this.chatElements.chatMessages.scrollHeight;
+    document
+      .getElementById("switch-agent")
+      .addEventListener("click", this.switchToRealAgent.bind(this));
   }
 
-  function switchToRealAgent() {
-    chatMode = "agent";
-    updateCurrentConversationStatus("Live Agent");
-    resetChatMessages();
-    reply("You have been transferred to a real agent. Please start your conversation.");
-    chatElements.chatInput.value = "";
-    chatElements.chatInput.focus();
-    updateConversationList();
-    saveConversationHistory();
-    updateChatHeaderTitle();
-  }
-
-  function resetChatMessages() {
-    chatElements.chatMessages.innerHTML = "";
-  }
-
-  function resumeConversation(index) {
-    currentConversationIndex = index;
-    chatMode = conversationHistory[index].status === "OpenAI" ? "openai" : "agent";
-    startConversation();
-    resetChatMessages();
-    conversationHistory[index].messages.forEach((message) =>
-      appendMessage(message.type, message.content)
+  switchToRealAgent() {
+    this.chatMode = "agent";
+    this.updateCurrentConversationStatus("Live Agent");
+    this.resetChatMessages();
+    this.reply(
+      "You have been transferred to a real agent. Please start your conversation."
     );
-    if (conversationHistory[index].active) {
-      chatElements.chatInputContainer.classList.remove("hidden");
-      chatElements.chatEndedMessage.classList.add("hidden");
+    this.chatElements.chatInput.value = "";
+    this.chatElements.chatInput.focus();
+    this.updateConversationList();
+    this.saveConversationHistory();
+    this.updateChatHeaderTitle();
+  }
+
+  resetChatMessages() {
+    this.chatElements.chatMessages.innerHTML = "";
+  }
+
+  resumeConversation(index) {
+    this.currentConversationIndex = index;
+    this.chatMode =
+      this.conversationHistory[index].status === "OpenAI" ? "openai" : "agent";
+    this.startConversation();
+    this.resetChatMessages();
+    this.conversationHistory[index].messages.forEach((message) =>
+      this.appendMessage(message.type, message.content, message.timestamp)
+    );
+    if (this.conversationHistory[index].active) {
+      this.chatElements.chatInputContainer.classList.remove("hidden");
+      this.chatElements.chatEndedMessage.classList.add("hidden");
     } else {
-      chatElements.chatInputContainer.classList.add("hidden");
-      chatElements.chatEndedMessage.classList.remove("hidden");
+      this.chatElements.chatInputContainer.classList.add("hidden");
+      this.chatElements.chatEndedMessage.classList.remove("hidden");
     }
-    chatElements.chatMessages.scrollTop = chatElements.chatMessages.scrollHeight;
+    this.chatElements.chatMessages.scrollTop =
+      this.chatElements.chatMessages.scrollHeight;
   }
 
-  function endCurrentConversation() {
-    if (currentConversationIndex !== null) {
-      conversationHistory[currentConversationIndex].active = false;
-      updateConversationList();
-      saveConversationHistory();
-      chatElements.chatInputContainer.classList.add("hidden");
-      chatElements.chatEndedMessage.classList.remove("hidden");
-      resetToLandingPage();
-      checkActiveConversations();
+  endCurrentConversation() {
+    if (this.currentConversationIndex !== null) {
+      this.conversationHistory[this.currentConversationIndex].active = false;
+      this.updateConversationList();
+      this.saveConversationHistory();
+      this.chatElements.chatInputContainer.classList.add("hidden");
+      this.chatElements.chatEndedMessage.classList.remove("hidden");
+      this.resetToLandingPage();
+      this.checkActiveConversations();
     }
   }
 
-  function resetToLandingPage() {
-    chatElements.landingPage.classList.remove("hidden");
-    chatElements.chatHeader.classList.add("hidden");
-    chatElements.chatMessages.classList.add("hidden");
-    chatElements.chatInputContainer.classList.add("hidden");
-    chatElements.chatEndedMessage.classList.add("hidden");
-    chatElements.userFormPage.classList.add("hidden");
-    chatElements.editUserPage.classList.add("hidden");
-    const emailTranscriptPage = document.getElementById("email-transcript-page");
-    emailTranscriptPage.classList.add("hidden");
-    chatMode = "openai";
-    chatElements.backButton.forEach((button) => {
-      button.style.display = "none";
-    });
-    updateConversationList();
-  }
-
-  function updateConversationList() {
-    chatElements.conversationList.innerHTML = "";
-    if (conversationHistory.length === 0) {
-      addNoHistoryMessage();
-      removeClearButton();
+  updateConversationList() {
+    this.chatElements.conversationList.innerHTML = "";
+    if (this.conversationHistory.length === 0) {
+      this.addNoHistoryMessage();
+      this.removeClearButton();
     } else {
-      renderConversationItems();
-      addClearButton();
+      this.renderConversationItems();
+      this.addClearButton();
     }
-    checkActiveConversations();
+    this.checkActiveConversations();
   }
 
-  function addNoHistoryMessage() {
+  addNoHistoryMessage() {
     const noHistoryMessage = document.createElement("p");
     noHistoryMessage.className = "no-history-message";
     noHistoryMessage.textContent = "No chat history";
-    chatElements.conversationList.appendChild(noHistoryMessage);
+    this.chatElements.conversationList.appendChild(noHistoryMessage);
   }
 
-  function renderConversationItems() {
-    conversationHistory.forEach((conversation, index) => {
-      const conversationItem = createConversationItem(conversation, index);
-      chatElements.conversationList.appendChild(conversationItem);
+  renderConversationItems() {
+    this.conversationHistory.forEach((conversation, index) => {
+      const conversationItem = this.createConversationItem(conversation, index);
+      this.chatElements.conversationList.appendChild(conversationItem);
     });
     document.querySelectorAll(".btn-active").forEach((button) => {
-      button.addEventListener("click", function () {
-        const index = parseInt(this.getAttribute("data-index"));
-        resumeConversation(index);
+      button.addEventListener("click", () => {
+        const index = parseInt(button.getAttribute("data-index"));
+        this.resumeConversation(index);
       });
     });
   }
 
-  function createConversationItem(conversation, index) {
-    const statusColor = conversation.active ? "green" : "red";
+  createConversationItem(conversation, index) {
     let iconSrc = "";
 
     if (conversation.status === "OpenAI") {
@@ -463,58 +774,81 @@ window.onload = function () {
       iconSrc = "./assets/admin.png";
     }
 
+    const lastMessage =
+      conversation.messages.length > 0
+        ? conversation.messages[conversation.messages.length - 1].content
+        : "(no messages)";
+
+    const lastMessageTimestamp =
+      conversation.messages.length > 0
+        ? conversation.messages[conversation.messages.length - 1].timestamp
+        : conversation.timestamp;
+
+    const relativeTime = this.getRelativeTime(lastMessageTimestamp);
+
     const conversationItem = document.createElement("div");
     conversationItem.className = "conversation-item";
     conversationItem.innerHTML = `
       <div class="conversation-icon">
-        <img src="${iconSrc}" alt="User Icon">
+        <img src="${iconSrc}" alt="User Icon" width="40" height="40">
       </div>
       <div class="conversation-content">
-        <p class="conversation-status">${conversation.status} - ${conversation.timestamp}</p>
-        <p class="status-dot" data-status="${conversation.active ? "active" : "inactive"}">•</p>
+        <p class="conversation-status">${
+          conversation.status
+        } - <span class="status-dot" data-status="${
+      conversation.active ? "active" : "inactive"
+    }">${conversation.active ? "active" : "ended"}</span></p>
+        <div class="status">
+          <p>${lastMessage}</p>
+        </div>
       </div>
       <div class="conversation-action">
+        <span class="relative-time">${relativeTime}</span>
         <button class="btn-active" data-index="${index}">
-          <img
-            src="./assets/next.svg"
-            alt="Close"
-            style="width: 20px; height: 20px"
-          />
+          <img src="./assets/next.svg" alt="Resume" width="20" height="20" />
         </button>
       </div>
     `;
     return conversationItem;
   }
 
-  function updateCurrentConversation(message, type) {
-    if (currentConversationIndex !== null) {
-      conversationHistory[currentConversationIndex].messages.push({
+  updateCurrentConversation(message, type, timestamp) {
+    if (this.currentConversationIndex !== null) {
+      this.conversationHistory[this.currentConversationIndex].messages.push({
         type,
         content: message,
+        timestamp,
       });
-      saveConversationHistory();
+      this.saveConversationHistory();
     }
   }
 
-  function updateCurrentConversationStatus(status) {
-    if (currentConversationIndex !== null) {
-      conversationHistory[currentConversationIndex].status = status;
+  updateCurrentConversationStatus(status) {
+    if (this.currentConversationIndex !== null) {
+      this.conversationHistory[this.currentConversationIndex].status = status;
     }
   }
 
-  function checkActiveConversations() {
-    const activeConversationExists = conversationHistory.some((conversation) => conversation.active);
-    toggleNewConversationButton(activeConversationExists);
-    toggleClearButton(activeConversationExists);
+  checkActiveConversations() {
+    const activeConversationExists = this.conversationHistory.some(
+      (conversation) => conversation.active
+    );
+    this.toggleNewConversationButton(activeConversationExists);
+    this.toggleClearButton(activeConversationExists);
   }
 
-  function toggleNewConversationButton(isActive) {
-    chatElements.newConversationButton.disabled = isActive;
-    chatElements.newConversationButton.textContent = isActive ? "Conversation Active" : "New Conversation";
-    chatElements.newConversationButton.classList.toggle("disabled", isActive);
+  toggleNewConversationButton(isActive) {
+    this.chatElements.newConversationButton.disabled = isActive;
+    this.chatElements.newConversationButton.textContent = isActive
+      ? "Conversation Active"
+      : "New Conversation";
+    this.chatElements.newConversationButton.classList.toggle(
+      "disabled",
+      isActive
+    );
   }
 
-  function toggleClearButton(isActive) {
+  toggleClearButton(isActive) {
     const clearButton = document.getElementById("clear-conversations");
     if (clearButton) {
       clearButton.disabled = isActive;
@@ -522,61 +856,95 @@ window.onload = function () {
     }
   }
 
-  function saveConversationHistory() {
-    localStorage.setItem("conversationHistory", JSON.stringify(conversationHistory));
-  }
-
-  function loadConversationHistory() {
-    const savedHistory = localStorage.getItem("conversationHistory");
-    if (savedHistory) {
-      conversationHistory = JSON.parse(savedHistory);
-    }
-  }
-
-  function clearConversationHistory() {
-    conversationHistory = [];
-    saveConversationHistory();
-    updateConversationList();
-  }
-
-  function addClearButton() {
-    removeClearButton();
+  addClearButton() {
+    this.removeClearButton();
 
     const clearButton = document.createElement("button");
     clearButton.id = "clear-conversations";
     clearButton.className = "btn-clear";
     clearButton.textContent = "Clear History";
-    clearButton.addEventListener("click", clearConversationHistory);
+    clearButton.addEventListener(
+      "click",
+      this.clearConversationHistory.bind(this)
+    );
 
-    chatElements.conversationList.appendChild(clearButton);
+    this.chatElements.conversationList.appendChild(clearButton);
   }
 
-  function removeClearButton() {
+  removeClearButton() {
     const clearButton = document.getElementById("clear-conversations");
     if (clearButton) {
       clearButton.remove();
     }
   }
 
-  function updateChatHeaderTitle() {
-    chatElements.chatHeaderTitle.textContent = chatMode === "openai" ? "OpenAI" : "Live Agent";
+  updateChatHeaderTitle() {
+    this.chatElements.chatHeaderTitle.textContent =
+      this.chatMode === "openai" ? "OpenAI" : "Live Agent";
   }
 
-  async function fetchFAQSuggestions(query) {
-    try {
-      const response = await fetch("https://base-api-development.qbit.co.id/faqs");
-      const data = await response.json();
-      const filteredResults = data.payload.results.filter((item) =>
-        item.question.toLowerCase().includes(query)
-      );
-      displaySearchResults(filteredResults);
-    } catch (error) {
-      console.error("Error fetching FAQ suggestions:", error);
+  getRelativeTime(timestamp) {
+    const now = new Date();
+    const messageTime = new Date(timestamp);
+    const diffInSeconds = Math.floor((now - messageTime) / 1000);
+
+    const intervals = {
+      year: 31536000,
+      month: 2592000,
+      week: 604800,
+      day: 86400,
+      hour: 3600,
+      minute: 60,
+      second: 1,
+    };
+
+    for (const interval in intervals) {
+      const count = Math.floor(diffInSeconds / intervals[interval]);
+      if (count >= 1) {
+        return `${count} ${interval}${count !== 1 ? "s" : ""} ago`;
+      }
     }
+
+    return "just now";
   }
 
-  function displaySearchResults(results) {
-    clearSearchResults();
+  fetchFAQSuggestions(query) {
+    const url = `${this.config.endpointFAQ}?query=${encodeURIComponent(query)}`;
+    return fetch(url)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data && data.payload && data.payload.results) {
+          const filteredResults = data.payload.results.filter((item) =>
+            item.question.toLowerCase().includes(query)
+          );
+          this.displaySearchResults(filteredResults);
+        } else {
+          this.clearSearchResults();
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching FAQ suggestions:", error);
+        this.clearSearchResults();
+      });
+  }
+
+  displaySearchResults(results) {
+    let searchResultsContainer = this.chatElements.searchBox.querySelector(
+      ".search-results-container"
+    );
+
+    if (!searchResultsContainer) {
+      searchResultsContainer = document.createElement("div");
+      searchResultsContainer.classList.add("search-results-container");
+      this.chatElements.searchBox.appendChild(searchResultsContainer);
+    }
+
+    searchResultsContainer.innerHTML = "";
 
     if (results.length > 0) {
       results.forEach((result) => {
@@ -584,8 +952,8 @@ window.onload = function () {
         resultItem.classList.add("search-result-item");
         resultItem.textContent = result.question;
         resultItem.addEventListener("click", () => {
-          showFAQAnswer(result);
-          clearSearchResults();
+          this.showFAQAnswer(result);
+          this.clearSearchResults();
         });
         searchResultsContainer.appendChild(resultItem);
       });
@@ -595,47 +963,58 @@ window.onload = function () {
     }
   }
 
-  function showFAQAnswer(faq) {
-    chatElements.faqQuestionElement.textContent = faq.question;
-    chatElements.faqAnswerElement.textContent = faq.answer;
-
-    chatElements.landingPage.classList.add("hidden");
-    chatElements.faqAnswerPage.classList.remove("hidden");
-  }
-
-  chatElements.backToSearchButton.addEventListener("click", function () {
-    chatElements.faqAnswerPage.classList.add("hidden");
-    chatElements.landingPage.classList.remove("hidden");
-  });
-
-  function clearSearchResults() {
+  clearSearchResults() {
+    const searchResultsContainer = this.chatElements.searchBox.querySelector(
+      ".search-results-container"
+    );
     searchResultsContainer.innerHTML = "";
     searchResultsContainer.style.display = "none";
   }
 
-  function scrollToLatest() {
-    chatElements.chatMessages.scrollTop = chatElements.chatMessages.scrollHeight;
-    hideGoToLatestButton();
+  handleSearchInput() {
+    const searchInput = this.chatElements.searchBox.querySelector("input");
+    const query = searchInput.value.trim().toLowerCase();
+    if (query.length > 0) {
+      this.fetchFAQSuggestions(query);
+    } else {
+      this.clearSearchResults();
+    }
   }
 
-  function showGoToLatestButton() {
-    chatElements.goToLatestButton.classList.remove("hidden");
-    chatElements.goToLatestButton.classList.add("visible");
+  showFAQAnswer(faq) {
+    this.chatElements.faqQuestionElement.textContent = faq.question;
+    this.chatElements.faqAnswerElement.innerHTML = faq.answer;
+
+    this.chatElements.landingPage.classList.add("hidden");
+    this.chatElements.faqAnswerPage.classList.remove("hidden");
   }
 
-  function hideGoToLatestButton() {
-    chatElements.goToLatestButton.classList.remove("visible");
-    chatElements.goToLatestButton.classList.add("hidden");
+  scrollToLatest() {
+    this.chatElements.chatMessages.scrollTop =
+      this.chatElements.chatMessages.scrollHeight;
+    this.hideGoToLatestButton();
   }
 
-  function showEmailTranscriptPage() {
-    chatElements.landingPage.classList.add("hidden");
-    chatElements.userFormPage.classList.add("hidden");
-    chatElements.chatHeader.classList.add("hidden");
-    chatElements.chatMessages.classList.add("hidden");
-    chatElements.chatInputContainer.classList.add("hidden");
-    chatElements.chatEndedMessage.classList.add("hidden");
-    const emailTranscriptPage = document.getElementById("email-transcript-page");
+  showGoToLatestButton() {
+    this.chatElements.goToLatestButton.classList.remove("hidden");
+    this.chatElements.goToLatestButton.classList.add("visible");
+  }
+
+  hideGoToLatestButton() {
+    this.chatElements.goToLatestButton.classList.remove("visible");
+    this.chatElements.goToLatestButton.classList.add("hidden");
+  }
+
+  showEmailTranscriptPage() {
+    this.chatElements.landingPage.classList.add("hidden");
+    this.chatElements.userFormPage.classList.add("hidden");
+    this.chatElements.chatHeader.classList.add("hidden");
+    this.chatElements.chatMessages.classList.add("hidden");
+    this.chatElements.chatInputContainer.classList.add("hidden");
+    this.chatElements.chatEndedMessage.classList.add("hidden");
+    const emailTranscriptPage = document.getElementById(
+      "email-transcript-page"
+    );
     emailTranscriptPage.classList.remove("hidden");
 
     const email = localStorage.getItem("userEmail");
@@ -644,17 +1023,20 @@ window.onload = function () {
       emailInput.value = email;
     }
     const transcriptForm = document.getElementById("transcript-form");
-    transcriptForm.addEventListener("submit", sendEmailTranscript);
+    transcriptForm.addEventListener(
+      "submit",
+      this.sendEmailTranscript.bind(this)
+    );
   }
 
-  function sendEmailTranscript(event) {
+  sendEmailTranscript(event) {
     event.preventDefault();
 
-    const email = document.querySelector('#email-transcript-page input[type="email"]').value;
-    const conversationHistory = JSON.parse(localStorage.getItem("conversationHistory"));
-
-    const selectedIndex = currentConversationIndex;
-    const selectedConversation = conversationHistory[selectedIndex];
+    const email = document.querySelector(
+      '#email-transcript-page input[type="email"]'
+    ).value;
+    const selectedConversation =
+      this.conversationHistory[this.currentConversationIndex];
 
     if (selectedConversation && !selectedConversation.active) {
       let chatContent = `Chat Type: ${selectedConversation.status}\n`;
@@ -671,31 +1053,35 @@ window.onload = function () {
       console.log(`Email tujuan: ${email}`);
       console.log(`Isi chat:\n${chatContent}`);
     } else if (selectedConversation && selectedConversation.active) {
-      console.log("Percakapan yang dipilih masih aktif. Email transcript tidak dapat dikirim.");
+      console.log(
+        "Percakapan yang dipilih masih aktif. Email transcript tidak dapat dikirim."
+      );
     } else {
       console.log("Percakapan yang dipilih tidak tersedia atau masih aktif.");
     }
 
-    resetToLandingPage();
+    this.resetToLandingPage();
   }
 
-  function backToChat() {
-    const emailTranscriptPage = document.getElementById("email-transcript-page");
+  backToChat() {
+    const emailTranscriptPage = document.getElementById(
+      "email-transcript-page"
+    );
     emailTranscriptPage.classList.add("hidden");
 
-    chatElements.chatHeader.classList.remove("hidden");
-    chatElements.chatMessages.classList.remove("hidden");
+    this.chatElements.chatHeader.classList.remove("hidden");
+    this.chatElements.chatMessages.classList.remove("hidden");
 
-    if (conversationHistory[currentConversationIndex].active) {
-      chatElements.chatInputContainer.classList.remove("hidden");
-      chatElements.chatEndedMessage.classList.add("hidden");
+    if (this.conversationHistory[this.currentConversationIndex]?.active) {
+      this.chatElements.chatInputContainer.classList.remove("hidden");
+      this.chatElements.chatEndedMessage.classList.add("hidden");
     } else {
-      chatElements.chatInputContainer.classList.add("hidden");
-      chatElements.chatEndedMessage.classList.remove("hidden");
+      this.chatElements.chatInputContainer.classList.add("hidden");
+      this.chatElements.chatEndedMessage.classList.remove("hidden");
     }
   }
 
-  function showEditProfile() {
+  showEditProfile() {
     const name = localStorage.getItem("userName");
     const email = localStorage.getItem("userEmail");
     const phone = localStorage.getItem("userPhone");
@@ -704,16 +1090,16 @@ window.onload = function () {
     document.getElementById("edit-email").value = email || "";
     document.getElementById("edit-phone").value = phone || "";
 
-    chatElements.landingPage.classList.add("hidden");
-    chatElements.chatHeader.classList.add("hidden");
-    chatElements.chatMessages.classList.add("hidden");
-    chatElements.chatInputContainer.classList.add("hidden");
-    chatElements.userFormPage.classList.add("hidden");
-    chatElements.editUserPage.classList.remove("hidden");
-    chatElements.chatEndedMessage.classList.add("hidden");
+    this.chatElements.landingPage.classList.add("hidden");
+    this.chatElements.chatHeader.classList.add("hidden");
+    this.chatElements.chatMessages.classList.add("hidden");
+    this.chatElements.chatInputContainer.classList.add("hidden");
+    this.chatElements.userFormPage.classList.add("hidden");
+    this.chatElements.editUserPage.classList.remove("hidden");
+    this.chatElements.chatEndedMessage.classList.add("hidden");
   }
 
-  function saveProfileEdits(event) {
+  saveProfileEdits(event) {
     event.preventDefault();
 
     const newName = document.getElementById("edit-name").value;
@@ -724,39 +1110,32 @@ window.onload = function () {
     localStorage.setItem("userEmail", newEmail);
     localStorage.setItem("userPhone", newPhone);
 
-    backToChatFromEdit();
+    this.backToChatFromEdit();
   }
 
-  function backToChatFromEdit() {
-    chatElements.editUserPage.classList.add("hidden");
-    chatElements.chatHeader.classList.remove("hidden");
-    chatElements.chatMessages.classList.remove("hidden");
+  backToChatFromEdit() {
+    this.chatElements.editUserPage.classList.add("hidden");
+    this.chatElements.chatHeader.classList.remove("hidden");
+    this.chatElements.chatMessages.classList.remove("hidden");
 
-    if (conversationHistory[currentConversationIndex]?.active) {
-      chatElements.chatInputContainer.classList.remove("hidden");
-      chatElements.chatEndedMessage.classList.add("hidden");
+    if (this.conversationHistory[this.currentConversationIndex]?.active) {
+      this.chatElements.chatInputContainer.classList.remove("hidden");
+      this.chatElements.chatEndedMessage.classList.add("hidden");
     } else {
-      chatElements.chatInputContainer.classList.add("hidden");
-      chatElements.chatEndedMessage.classList.remove("hidden");
+      this.chatElements.chatInputContainer.classList.add("hidden");
+      this.chatElements.chatEndedMessage.classList.remove("hidden");
     }
   }
 
-  function handleSearchInput() {
-    const query = searchInput.value.trim().toLowerCase();
-    if (query.length > 0) {
-      fetchFAQSuggestions(query);
-    } else {
-      clearSearchResults();
-    }
-  }
-
-  function toggleDropdown() {
+  toggleDropdown() {
     const dropdownMenu = document.querySelector(".dropdown-menu");
     dropdownMenu.classList.toggle("hidden");
-    this.parentElement.classList.toggle("open");
+    this.chatElements.chatHeader
+      .querySelector(".dropdown")
+      .classList.toggle("open");
   }
 
-  function closeDropdownOnClickOutside(e) {
+  closeDropdownOnClickOutside(e) {
     const dropdownToggle = document.querySelector(".dropdown-toggle");
     if (!dropdownToggle.parentElement.contains(e.target)) {
       const dropdownMenu = document.querySelector(".dropdown-menu");
@@ -765,12 +1144,15 @@ window.onload = function () {
     }
   }
 
-  function handleChatScroll() {
-    const atBottom = chatElements.chatMessages.scrollHeight - chatElements.chatMessages.scrollTop === chatElements.chatMessages.clientHeight;
+  handleChatScroll() {
+    const atBottom =
+      this.chatElements.chatMessages.scrollHeight -
+        this.chatElements.chatMessages.scrollTop ===
+      this.chatElements.chatMessages.clientHeight;
     if (atBottom) {
-      hideGoToLatestButton();
+      this.hideGoToLatestButton();
     } else {
-      showGoToLatestButton();
+      this.showGoToLatestButton();
     }
   }
-};
+}

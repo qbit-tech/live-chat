@@ -2,250 +2,28 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chat Widget</title>
-    <script async src="./chat-widget.js"></script>
-    <link rel="stylesheet" href="chat-widget.css" />
+    <title>Chat Widget Test Page</title>
   </head>
   <body>
     <div class="container">
       <h1 class="title">Chat Widget</h1>
     </div>
-    <div id="chat-widget-container">
-      <div id="chat-bubble" class="chat-bubble">
-        <img
-          id="chat-icon"
-          src="./assets/customer-service.svg"
-          alt="Chat Bubble"
-          style="width: 40px; height: 40px"
-        />
-      </div>
-      <div id="chat-popup" class="chat-popup hidden">
-        <div id="landing-page" class="landing-page">
-          <button id="close-chat-popup" class="back-button">
-            <img
-              src="./assets/close.svg"
-              alt="Close"
-              style="width: 20px; height: 20px"
-            />
-          </button>
-          <div class="landing-header">
-            <h2>Hi there <span role="img" aria-label="wave">👋</span></h2>
-            <p>
-              Need help? Search our help center for answers or start a
-              conversation:
-            </p>
-          </div>
-          <div class="search-box">
-            <input type="text" placeholder="Search for answers" />
-            <button class="search-button">Search</button>
-          </div>
-          <div class="conversation-list">
-            <div class="conversation-item">
-              <div class="conversation-icon">
-                <img src="./assets/bot.png" alt="bot Icon" />
-              </div>
-              <div class="conversation-action">
-                <button class="btn-active" id="start-conversation">
-                  <img
-                    src="./assets/next.svg"
-                    alt="Close"
-                    style="width: 20px; height: 20px"
-                  />
-                </button>
-              </div>
-            </div>
-          </div>
-          <div class="new-conversation">
-            <button id="new-conversation">New Conversation</button>
-          </div>
-        </div>
-        <div id="faq-answer-page" class="hidden">
-          <div class="chat-header">
-            <button id="back-to-search" class="back-button">
-              <img
-                src="./assets/arrow.svg"
-                alt="Back"
-                style="width: 20px; height: 20px"
-              />
-            </button>
-            <h3 id="faq-question"></h3>
-          </div>
-          <div class="chat-messages">
-            <div class="faq-answer">
-              <p id="faq-answer"></p>
-            </div>
-          </div>
-        </div>
-        <div id="user-form-page" class="hidden">
-          <div class="chat-header">
-            <button id="back-to-landing" class="back-button">
-              <img
-                src="./assets/arrow.svg"
-                alt="Back"
-                style="width: 20px; height: 20px"
-              />
-            </button>
-            <h3>User Information</h3>
-          </div>
-          <div class="chat-messages">
-            <div id="user-info-confirmation" class="hidden">
-              <div>
-                <p>Are you :</p>
-                <h2 id="user-name-display"></h2>
-              </div>
-              <div>
-                <label for="message-confirmation">Message:</label>
-                <textarea
-                  id="message-confirmation"
-                  name="message"
-                  rows="3"
-                  required
-                ></textarea>
-              </div>
-              <button type="submit" class="btn-start-chat" id="start-chat">
-                Start Chat
-              </button>
-              <button type="button" class="btn-edit" id="edit-info">
-                Edit
-              </button>
-            </div>
-            <div class="user-form hidden">
-              <form id="conversation-form">
-                <div>
-                  <label for="name">Name:</label>
-                  <input type="text" id="name" name="name" required />
-                </div>
-                <div>
-                  <label for="email">Email:</label>
-                  <input type="email" id="email" name="email" required />
-                </div>
-                <div>
-                  <label for="phone">Phone:</label>
-                  <input type="tel" id="phone" name="phone" required />
-                </div>
-                <div>
-                  <label for="message">Message:</label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    rows="3"
-                    required
-                  ></textarea>
-                </div>
-                <button type="submit" class="btn-start-chat">Start Chat</button>
-              </form>
-            </div>
-          </div>
-        </div>
-        <div id="chat-header" class="chat-header hidden">
-          <button id="back-to-landing" class="back-button">
-            <img
-              src="./assets/arrow.svg"
-              alt="Back"
-              style="width: 20px; height: 20px"
-            />
-          </button>
-          <h3 id="chat-header-title"></h3>
-          <div class="dropdown">
-            <button class="dropdown-toggle">
-              <img
-                src="./assets/more.svg"
-                alt="More"
-                style="width: 25px; height: 25px"
-              />
-            </button>
-            <div class="dropdown-menu hidden">
-              <button id="edit-profile" class="dropdown-item dropdown-item-1">
-                Edit Profile
-              </button>
-              <button
-                id="email-transcript"
-                class="dropdown-item dropdown-item-2"
-              >
-                Email Transcript
-              </button>
-              <button
-                id="end-conversation"
-                class="dropdown-item dropdown-item-3"
-              >
-                End Conversation
-              </button>
-            </div>
-          </div>
-        </div>
-        <div id="chat-messages" class="chat-messages hidden"></div>
-        <div id="chat-input-container" class="chat-input-container hidden">
-          <input
-            type="text"
-            id="chat-input"
-            class="chat-input"
-            placeholder="Type your message..."
-          />
-          <button id="chat-submit" class="chat-submit">Send</button>
-          <button id="go-to-latest" class="go-to-latest hidden">
-            Go to Latest
-          </button>
-        </div>
-        <div id="chat-ended-message" class="chat-ended-message hidden">
-          <p>Chat has ended</p>
-        </div>
-        <div id="edit-user-page" class="hidden">
-          <div class="chat-header">
-            <button id="back-to-chat-edit" class="back-button">
-              <img
-                src="./assets/arrow.svg"
-                alt="Back"
-                style="width: 20px; height: 20px"
-              />
-            </button>
-            <h3>Edit Profile</h3>
-          </div>
-          <div class="chat-messages">
-            <div class="user-edit">
-              <form id="edit-form">
-                <div>
-                  <label for="edit-name">Name:</label>
-                  <input type="text" id="edit-name" name="name" required />
-                </div>
-                <div>
-                  <label for="edit-email">Email:</label>
-                  <input type="email" id="edit-email" name="email" required />
-                </div>
-                <div>
-                  <label for="edit-phone">Phone:</label>
-                  <input type="tel" id="edit-phone" name="phone" required />
-                </div>
-                <button type="submit" class="edit-user">Save</button>
-              </form>
-            </div>
-          </div>
-        </div>
-        <div id="email-transcript-page" class="hidden">
-          <div class="chat-header">
-            <button id="back-to-chat" class="back-button">
-              <img
-                src="./assets/arrow.svg"
-                alt="Back"
-                style="width: 20px; height: 20px"
-              />
-            </button>
-            <h3>Email Transcript</h3>
-          </div>
-          <div class="chat-messages">
-            <form id="transcript-form" class="user-form">
-              <div>
-                <label for="email"
-                  >Your chat transcript will be sent here:</label
-                >
-                <input type="email" required />
-              </div>
-              <button type="submit" class="btn-start-chat">Send</button>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
+    <script type="module">
+      import QLiveChatWidget from "./chat-widget.js";
+
+      const widget = new QLiveChatWidget({
+        botId: "",
+        endpointFAQ: "https://base-api-development.qbit.co.id/faqs",
+        endpointChat: "https://QLiveChatWidget.com",
+        user: {
+          name: "",
+          email: "",
+          phone: "",
+        },
+      });
+
+      widget.init();
+    </script>
   </body>
 </html>
