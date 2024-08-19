@@ -1,4 +1,4 @@
-export default class QLiveChatWidget {
+class QLiveChatWidget {
   constructor(config) {
     this.config = config;
     this.chatMode = "openai";
