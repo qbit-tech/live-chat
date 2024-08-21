@@ -14,19 +14,20 @@
     <script>
       window.onload = function() {
         const widget = new QLiveChatWidget({
-          botId: "",
+          botId: "bot_id",
           endpointFAQ: "https://base-api-development.qbit.co.id/faqs",
-          endpointChat: "https://QLiveChatWidget.com",
+          endpointChat: "http://localhost:3001/live-chat",
           user: {
             name: "",
             email: "",
             phone: "",
           },
         });
-    
+        
         widget.init();
       };
     </script>
+    
     
   </body>
 </html>
