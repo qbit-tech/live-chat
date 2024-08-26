@@ -11,19 +11,23 @@
     <div class="container">
       <h1 class="title">Chat Widget</h1>
     </div>
-    <script type="module">
-      const widget = new QLiveChatWidget({
-        botId: "",
-        endpointFAQ: "https://base-api-development.qbit.co.id/faqs",
-        endpointChat: "https://QLiveChatWidget.com",
-        user: {
-          name: "",
-          email: "",
-          phone: "",
-        },
-      });
-
-      widget.init();
+    <script>
+      window.onload = function() {
+        const widget = new QLiveChatWidget({
+          botId: "bot_id",
+          endpointFAQ: "https://base-api-development.qbit.co.id/faqs",
+          endpointChat: "http://localhost:3001/live-chat",
+          user: {
+            name: "",
+            email: "",
+            phone: "",
+          },
+        });
+        
+        widget.init();
+      };
     </script>
+    
+    
   </body>
 </html>
