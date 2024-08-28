@@ -4,6 +4,9 @@ class QLiveChatWidget {
     this.chatMode = "openai";
     this.conversationHistory = [];
     this.currentConversationIndex = null;
+    this.isRequestPending = false;
+    this.hasOfferedRealAgent = false;
+    this.isNewConversation = true; 
   }
 
   init() {
@@ -286,6 +289,7 @@ class QLiveChatWidget {
         width: 100%;
         border-top-left-radius: 1rem;
         border-top-right-radius: 1rem;
+      
       }
 
       .landing-header h2 {
@@ -299,7 +303,7 @@ class QLiveChatWidget {
       .landing-header p {
         text-align: start;
         font-size: 15px;
-        margin-bottom: 1.5rem;
+        margin-bottom: 2.25rem;
         margin-top: 0;
         padding-inline: 2rem;
         color: var(--color-icon);
@@ -312,7 +316,7 @@ class QLiveChatWidget {
         overflow-x: hidden;
         background-color: var(--color-secondary);
         border-radius: 0.5rem;
-        height: 55%;
+        height: 100%;
         position: relative;
         box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1), 0px 1px 3px rgba(0, 0, 0, 0.08);
       }
@@ -469,7 +473,7 @@ class QLiveChatWidget {
         margin: 1rem;
         margin-top: -1.5rem;
         width: 90%;
-        height: 50px;
+        height: 9%;
         box-shadow: -5px -5px 10px rgba(0, 0, 0, 0.1), 5px 5px 10px rgba(0, 0, 0, 0.1),
           0px 0px 15px rgba(0, 0, 0, 0.2);
         transition: box-shadow 0.3s ease;
@@ -1520,33 +1524,40 @@ class QLiveChatWidget {
   }
 
   handleConfirmationStartChat() {
-    const message = document
-      .getElementById("message-confirmation")
-      .value.trim();
+    const name = localStorage.getItem("userName") || "";
+    const email = localStorage.getItem("userEmail") || "";
+    const phone = localStorage.getItem("userPhone") || "";
+    const message = document.getElementById("message-confirmation").value.trim();
 
-    if (message) {
-      if (
-        !this.conversationHistory.some((conversation) => conversation.active)
-      ) {
-        this.startNewConversation(message);
-      } else {
-        console.log(
-          "There is already an active conversation. Please end the current conversation before starting a new one."
-        );
-      }
+    if (!message) {
+        console.error("Message is missing.");
+        return;
     }
-  }
+
+    if (!name || !email || !phone) {
+        console.error("Profile data is missing.");
+        return;
+    }
+
+    this.startNewConversation(name, email, phone, message);
+}
+
 
   handleFormSubmit(event) {
     event.preventDefault();
-    const name = document.getElementById("name").value;
-    const email = document.getElementById("email").value;
-    const phone = document.getElementById("phone").value;
-    const message = document.getElementById("message").value;
 
-    this.saveFormValues(name, email, phone);
-    this.startNewConversation(message);
-  }
+    const name = document.getElementById("name").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    const message = document.getElementById("message").value.trim();
+
+    localStorage.setItem("userName", name);
+    localStorage.setItem("userEmail", email);
+    localStorage.setItem("userPhone", phone);
+
+    this.startNewConversation(name, email, phone, message);
+}
+
 
   saveFormValues(name, email, phone) {
     localStorage.setItem("userName", name);
@@ -1554,27 +1565,74 @@ class QLiveChatWidget {
     localStorage.setItem("userPhone", phone);
   }
 
-  startNewConversation(initialMessage) {
-    this.resetChatMessages();
-
-    const timestamp = new Date().toISOString();
-    this.conversationHistory.push({
-      status: "OpenAI",
-      preview: "New conversation started...",
-      timestamp,
-      active: true,
-      messages: [],
-    });
-    this.currentConversationIndex = this.conversationHistory.length - 1;
-    this.startConversation();
-    this.reply("Hello! How can I assist you today?");
-    if (initialMessage) {
-      this.onUserRequest(initialMessage);
+  startNewConversation(name, email, phone, initialMessage) {
+    if (this.isRequestPending) {
+        console.warn("A request is already in progress. Please wait.");
+        return;
     }
-    this.updateConversationList();
-    this.saveConversationHistory();
-    this.checkActiveConversations();
-  }
+
+    this.isRequestPending = true;
+
+    this.hasOfferedRealAgent = false;
+    this.isNewConversation = true;
+
+    const requestBody = {
+        profile: { name, email, phone },
+        botId: this.config.botId,
+        message: initialMessage,
+    };
+
+    console.log('Request Body:', requestBody);
+
+    fetch(`${this.config.endpointChat}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Response Data:', data);
+        if (data.payload && data.payload.roomId) {
+            this.currentRoomId = data.payload.roomId;
+            console.log('Room ID:', this.currentRoomId);
+
+            this.resetChatMessages();
+
+            localStorage.setItem("userName", name);
+            localStorage.setItem("userEmail", email);
+            localStorage.setItem("userPhone", phone);
+
+            const timestamp = new Date().toISOString();
+            this.conversationHistory.push({
+                status: "OpenAI",
+                preview: "New conversation started...",
+                timestamp,
+                active: true,
+                messages: [],
+                roomId: data.payload.roomId,
+            });
+            this.currentConversationIndex = this.conversationHistory.length - 1;
+            this.startConversation();
+            this.reply("Hello! How can I assist you today?");
+            if (initialMessage) {
+                this.onUserRequest(initialMessage);
+            }
+            this.updateConversationList();
+            this.saveConversationHistory();
+            this.checkActiveConversations();
+        } else {
+            console.error("Failed to start conversation: Invalid payload or roomId missing", data);
+        }
+    })
+    .catch(error => console.error("Error starting conversation:", error))
+    .finally(() => {
+        this.isRequestPending = false;
+    });
+}
+
+
+
+
 
   startConversation() {
     this.chatElements.landingPage.classList.add("hidden");
@@ -1603,21 +1661,60 @@ class QLiveChatWidget {
   }
 
   onUserRequest(message) {
+    if (this.isNewConversation) {
+        this.hasOfferedRealAgent = false;
+        this.isNewConversation = false;
+    }
+
     const messageTimestamp = new Date().toISOString();
     this.appendMessage("user", message, messageTimestamp);
     this.updateCurrentConversation(message, "user", messageTimestamp);
+
     if (this.chatMode === "openai") {
-      setTimeout(() => {
-        this.reply("Hello! This is a sample reply from OpenAI.");
-        this.offerRealAgentOption();
-      }, 200);
-    } else {
-      setTimeout(
-        () => this.reply("You are now chatting with a real agent."),
-        200
-      );
+        const requestBody = {
+            roomId: this.currentRoomId,
+            senderId: this.config.botId,
+            message: message,
+        };
+
+        console.log('Request Body:', requestBody);
+
+        fetch(`${this.config.endpointChat}/send-message`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody),
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response Data:', data);
+
+            if (data && data.payload && data.payload.message) {
+                this.reply(data.payload.message);
+            } else {
+                this.reply("Failed to receive a proper response from the bot. Please try again later.");
+                console.error("Failed to receive message:", data);
+            }
+        })
+        .catch(error => {
+            console.error("Error sending message:", error);
+            this.reply(`Error: ${error.message}`);
+        })
+        .finally(() => {
+            if (!this.hasOfferedRealAgent) {
+                this.offerRealAgentOption();
+                this.hasOfferedRealAgent = true;
+            }
+        });
+    } else if (this.chatMode === "agent") {
+        const adminResponse = "This is a response from the live agent.";
+        this.reply(adminResponse);
     }
-  }
+}
 
   appendMessage(type, content, timestamp) {
     const messageElement = document.createElement("div");
@@ -1660,31 +1757,39 @@ class QLiveChatWidget {
     const optionElement = document.createElement("div");
     optionElement.className = "message reply";
     optionElement.innerHTML = `
-      <div class="bubble">
-        If you need further assistance, you can <button id="switch-agent" class="switch-agent-button">Chat with a real agent</button>.
-      </div>
+        <div class="bubble">
+            If you need further assistance, you can <button id="switch-agent" class="switch-agent-button">Chat with a real agent</button>.
+        </div>
     `;
     this.chatElements.chatMessages.appendChild(optionElement);
-    this.chatElements.chatMessages.scrollTop =
-      this.chatElements.chatMessages.scrollHeight;
-    document
-      .getElementById("switch-agent")
-      .addEventListener("click", this.switchToRealAgent.bind(this));
-  }
+    this.chatElements.chatMessages.scrollTop = this.chatElements.chatMessages.scrollHeight;
+    document.getElementById("switch-agent").addEventListener("click", this.switchToRealAgent.bind(this));
+}
+
 
   switchToRealAgent() {
-    this.chatMode = "agent";
-    this.updateCurrentConversationStatus("Live Agent");
-    this.resetChatMessages();
-    this.reply(
-      "You have been transferred to a real agent. Please start your conversation."
-    );
-    this.chatElements.chatInput.value = "";
-    this.chatElements.chatInput.focus();
-    this.updateConversationList();
-    this.saveConversationHistory();
-    this.updateChatHeaderTitle();
-  }
+    fetch(`${this.config.endpointChat}/${this.currentRoomId}/start-live-agent`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        this.chatMode = "agent";
+        this.updateCurrentConversationStatus("Live Agent");
+        this.resetChatMessages();
+        this.reply(
+            "You have been transferred to a real agent. Please start your conversation."
+        );
+        this.chatElements.chatInput.value = "";
+        this.chatElements.chatInput.focus();
+        this.updateConversationList();
+        this.saveConversationHistory();
+        this.updateChatHeaderTitle();
+    })
+    .catch(error => console.error("Error switching to real agent:", error));
+}
 
   resetChatMessages() {
     this.chatElements.chatMessages.innerHTML = "";
@@ -1711,16 +1816,36 @@ class QLiveChatWidget {
   }
 
   endCurrentConversation() {
+
+    this.hasOfferedRealAgent = false;
+    this.isNewConversation = true;
+
     if (this.currentConversationIndex !== null) {
-      this.conversationHistory[this.currentConversationIndex].active = false;
-      this.updateConversationList();
-      this.saveConversationHistory();
-      this.chatElements.chatInputContainer.classList.add("hidden");
-      this.chatElements.chatEndedMessage.classList.remove("hidden");
-      this.resetToLandingPage();
-      this.checkActiveConversations();
+        fetch(`${this.config.endpointChat}/${this.currentRoomId}/end`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Response Data:', data);
+            if (data.code === 'success' && data.payload && data.payload.isSuccess) {
+                this.conversationHistory[this.currentConversationIndex].active = false;
+                this.updateConversationList();
+                this.saveConversationHistory();
+                this.chatElements.chatInputContainer.classList.add("hidden");
+                this.chatElements.chatEndedMessage.classList.remove("hidden");
+                this.resetToLandingPage();
+                this.checkActiveConversations();
+            } else {
+                console.error("Failed to end conversation:", data);
+            }
+        })
+        .catch(error => console.error("Error ending conversation:", error));
     }
-  }
+}
+
+
+
 
   updateConversationList() {
     this.chatElements.conversationList.innerHTML = "";
@@ -2091,16 +2216,46 @@ class QLiveChatWidget {
   saveProfileEdits(event) {
     event.preventDefault();
 
+    if (!this.currentRoomId) {
+        console.error("Room ID is undefined. Cannot update profile.");
+        return;
+    }
+
     const newName = document.getElementById("edit-name").value;
     const newEmail = document.getElementById("edit-email").value;
     const newPhone = document.getElementById("edit-phone").value;
 
-    localStorage.setItem("userName", newName);
-    localStorage.setItem("userEmail", newEmail);
-    localStorage.setItem("userPhone", newPhone);
+    const requestBody = {
+        roomId: this.currentRoomId,
+        name: newName,
+        email: newEmail,
+        phone: newPhone,
+    };
 
-    this.backToChatFromEdit();
-  }
+    console.log('Request Body:', requestBody);
+
+    fetch(`${this.config.endpointChat}/${this.currentRoomId}/update-profile`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Response Data:', data);
+        if (data.code === 'success' && data.payload && data.payload.isSuccess) {
+            localStorage.setItem("userName", newName);
+            localStorage.setItem("userEmail", newEmail);
+            localStorage.setItem("userPhone", newPhone);
+            this.backToChatFromEdit();
+        } else {
+            console.error("Failed to update profile:", data);
+        }
+    })
+    .catch(error => console.error("Error updating profile:", error));
+}
+
+
+
 
   backToChatFromEdit() {
     this.chatElements.editUserPage.classList.add("hidden");
@@ -2146,5 +2301,4 @@ class QLiveChatWidget {
   }
 }
 
-// Tambahkan QLiveChatWidget ke global scope (window)
 window.QLiveChatWidget = QLiveChatWidget;
