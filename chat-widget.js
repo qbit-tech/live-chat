@@ -977,7 +977,7 @@ class QLiveChatWidget {
       @media (max-width: 768px) {
         .chat-popup {
           width: 100%;
-          height: 100vh;
+          height: 100dvh;
           bottom: 0;
           right: 0;
           border-radius: 0;
