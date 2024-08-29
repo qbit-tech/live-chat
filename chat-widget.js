@@ -999,11 +999,61 @@ class QLiveChatWidget {
         background-size: calc(100%/3) 50%;
         animation: l3 1s infinite linear;
       }
+
       @keyframes l3 {
         20%{background-position:0%   0%, 50%  50%,100%  50%}
         40%{background-position:0% 100%, 50%   0%,100%  50%}
         60%{background-position:0%  50%, 50% 100%,100%   0%}
         80%{background-position:0%  50%, 50%  50%,100% 100%}
+      }
+
+      .modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: var(--color-secondary);
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05);
+        z-index: 1001;
+      }
+
+      .modal-content {
+          text-align: center;
+      }
+
+      .modal h3 {
+          margin-bottom: 1rem;
+      }
+
+      .modal p {
+          margin-bottom: 1.5rem;
+      }
+
+      .modal-btn-yes, .modal-btn-no {
+          color: var(--color-icon);
+          border: none;
+          padding: 0.5rem 1rem;
+          border-radius: 0.375rem;
+          cursor: pointer;
+          margin: 0 0.5rem;
+      }
+
+      .modal-btn-yes{
+        background-color: var(--color-danger);
+      }
+
+      .modal-btn-yes:hover {
+          background-color: var(--color-danger-dark);
+      }
+
+      .modal-btn-no{
+        background-color: var(--color-primary);
+      }
+
+      .modal-btn-no:hover {
+          background-color: var(--color-primary-dark);
       }
 
       @media (max-width: 768px) {
@@ -1077,6 +1127,7 @@ class QLiveChatWidget {
         ${this.getChatMessagesHTML()}
         ${this.getEditUserPageHTML()}
         ${this.getEmailTranscriptPageHTML()}
+        ${this.getEndConversationModalHTML()}
       </div>
     `;
   }
@@ -1288,6 +1339,19 @@ class QLiveChatWidget {
     `;
   }
 
+  getEndConversationModalHTML() {
+    return `
+        <div id="end-conversation-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3>End Conversation</h3>
+                <p>Are you sure you want to end this conversation?</p>
+                <button id="confirm-end-conversation" class="modal-btn-yes">Yes</button>
+                <button id="cancel-end-conversation" class="modal-btn-no">No</button>
+            </div>
+        </div>
+    `;
+  }
+
   cacheChatElements() {
     this.chatElements = {
       chatInput: document.getElementById("chat-input"),
@@ -1321,6 +1385,13 @@ class QLiveChatWidget {
       closeChatPopupButton: document.getElementById("close-chat-popup"),
       searchBox: document.querySelector(".search-box"),
       endConversationButton: document.getElementById("end-conversation"),
+      confirmEndConversationButton: document.getElementById(
+        "confirm-end-conversation"
+      ),
+      cancelEndConversationButton: document.getElementById(
+        "cancel-end-conversation"
+      ),
+      endConversationModal: document.getElementById("end-conversation-modal"),
     };
   }
 
@@ -1394,8 +1465,32 @@ class QLiveChatWidget {
 
     this.chatElements.endConversationButton.addEventListener(
       "click",
+      this.showEndConversationModal.bind(this)
+    );
+
+    this.chatElements.confirmEndConversationButton.addEventListener(
+      "click",
       this.endCurrentConversation.bind(this)
     );
+
+    this.chatElements.cancelEndConversationButton.addEventListener(
+      "click",
+      this.hideEndConversationModal.bind(this)
+    );
+  }
+
+  showEndConversationModal() {
+    const modal = this.chatElements.endConversationModal;
+    if (modal) {
+      modal.classList.remove("hidden");
+    }
+  }
+
+  hideEndConversationModal() {
+    const modal = this.chatElements.endConversationModal;
+    if (modal) {
+      modal.classList.add("hidden");
+    }
   }
 
   handleResize() {
@@ -1922,13 +2017,6 @@ class QLiveChatWidget {
             data.payload &&
             data.payload.isSuccess
           ) {
-            const conversation =
-              this.conversationHistory[this.currentConversationIndex];
-            conversation.messages = conversation.messages.filter(
-              (message) => !message.content.includes("switch-agent-button")
-            );
-            conversation.hasOfferedRealAgent = false;
-
             this.conversationHistory[
               this.currentConversationIndex
             ].active = false;
@@ -1942,7 +2030,10 @@ class QLiveChatWidget {
             console.error("Failed to end conversation:", data);
           }
         })
-        .catch((error) => console.error("Error ending conversation:", error));
+        .catch((error) => console.error("Error ending conversation:", error))
+        .finally(() => {
+          this.hideEndConversationModal();
+        });
     }
   }
 
