@@ -9,14 +9,50 @@ class QLiveChatWidget {
     this.isNewConversation = true;
   }
 
-  init() {
-    this.injectCSS();
-    this.setupWidget();
-    this.loadConversationHistory();
-    this.addEventListeners();
-    this.checkActiveConversations();
+  async init() {
+    try {
+      const widgetConfig = await this.fetchWidgetConfig(this.config.widgetId);
+      this.config = { ...this.config, settings: widgetConfig };
+      
+      console.log("Final Widget Config:", this.config);
+      
+      if (!this.config.settings.botId || !this.config.settings.faqEndpoint || !this.config.settings.chatEndpoint) {
+        throw new Error("Missing essential widget settings.");
+      }
+  
+      // Lanjutkan dengan inisialisasi widget
+      this.injectCSS();
+      this.setupWidget();
+      this.loadConversationHistory();
+      this.addEventListeners();
+      this.checkActiveConversations();
+    } catch (error) {
+      console.error("Failed to initialize the widget:", error);
+    }
   }
+  
 
+  async fetchWidgetConfig(widgetId) {
+    const response = await fetch(`${this.config.endpointWidget}/${widgetId}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch widget configuration: ${response.statusText}`);
+    }
+    const data = await response.json();
+    console.log("Fetched Widget Config:", data);
+  
+    const settings = {
+      ...data.payload.settings,
+      botId: data.payload.defaultBotId, // Gunakan defaultBotId sebagai botId
+    };
+  
+    // Debug log untuk memastikan URL endpoint valid
+    console.log("FAQ Endpoint:", settings.faqEndpoint);
+    console.log("Chat Endpoint:", settings.chatEndpoint);
+    console.log("Bot ID:", settings.botId);
+  
+    return settings;
+  }
+  
   injectCSS() {
     const styleElement = document.createElement("style");
     styleElement.textContent = `
@@ -472,9 +508,9 @@ class QLiveChatWidget {
       .search-box {
         display: flex;
         margin: 1rem;
-        margin-top: -1.5rem;
+        margin-top: -5%;
         width: 90%;
-        height: 9%;
+        height: 10%;
         box-shadow: -5px -5px 10px rgba(0, 0, 0, 0.1), 5px 5px 10px rgba(0, 0, 0, 0.1),
           0px 0px 15px rgba(0, 0, 0, 0.2);
         transition: box-shadow 0.3s ease;
@@ -588,7 +624,7 @@ class QLiveChatWidget {
         box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.1), 4px 4px 8px rgba(0, 0, 0, 0.1),
           0px 8px 12px rgba(0, 0, 0, 0.15);
         border-radius: 0.375rem;
-        margin-top: 3.3rem;
+        margin-top: 3rem;
         max-height: 15rem;
         overflow-y: auto;
         width: 75%;
@@ -1014,8 +1050,10 @@ class QLiveChatWidget {
         transform: translate(-50%, -50%);
         background-color: var(--color-secondary);
         padding: 1.5rem;
+        width: 75%;
         border-radius: 0.5rem;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05);
+        box-shadow: -5px -5px 10px rgba(0, 0, 0, 0.1), 5px 5px 10px rgba(0, 0, 0, 0.1),
+          0px 0px 15px rgba(0, 0, 0, 0.2);
         z-index: 1001;
       }
 
@@ -1151,7 +1189,7 @@ class QLiveChatWidget {
         <div class="new-conversation">
           <button id="new-conversation">New Conversation</button>
         </div>
-        <div id="chat-version" class="chat-version">Live Chat Widget v1.0.0</div>
+        <div id="chat-version" class="chat-version">Live Chat Widget v0.0.1</div>
       </div>
     `;
   }
@@ -1708,13 +1746,13 @@ class QLiveChatWidget {
 
     const requestBody = {
       profile: { name, email, phone },
-      botId: this.config.botId,
+      botId: this.config.settings.botId,
       message: initialMessage,
     };
 
     console.log("Request Body:", requestBody);
 
-    fetch(`${this.config.endpointChat}/start`, {
+    fetch(`${this.config.settings.chatEndpoint}/conversation/start`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
@@ -1799,7 +1837,6 @@ class QLiveChatWidget {
     this.appendMessage("user", message, messageTimestamp);
     this.updateCurrentConversation(message, "user", messageTimestamp);
 
-    // Tambahkan loader saat sedang menunggu respon bot
     const loaderElement = document.createElement("div");
     loaderElement.className = "loader";
 
@@ -1818,11 +1855,11 @@ class QLiveChatWidget {
     if (this.chatMode === "openai") {
       const requestBody = {
         roomId: this.currentRoomId,
-        senderId: this.config.botId,
+        senderId: this.config.settings.botId,
         message: message,
       };
 
-      fetch(`${this.config.endpointChat}/send-message`, {
+      fetch(`${this.config.settings.chatEndpoint}/conversation/send-message`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
@@ -1946,7 +1983,7 @@ class QLiveChatWidget {
 
   switchToRealAgent() {
     fetch(
-      `${this.config.endpointChat}/${this.currentRoomId}/start-live-agent`,
+      `${this.config.settings.chatEndpoint}/conversation/${this.currentRoomId}/start-live-agent`,
       {
         method: "POST",
         headers: {
@@ -2005,7 +2042,7 @@ class QLiveChatWidget {
     this.isNewConversation = true;
 
     if (this.currentConversationIndex !== null) {
-      fetch(`${this.config.endpointChat}/${this.currentRoomId}/end`, {
+      fetch(`${this.config.settings.chatEndpoint}/conversation/${this.currentRoomId}/end`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       })
@@ -2220,17 +2257,17 @@ class QLiveChatWidget {
   }
 
   fetchFAQSuggestions(query) {
-    const url = `${this.config.endpointFAQ}?query=${encodeURIComponent(query)}`;
+    const url = `${this.config.settings.faqEndpoint}?query=${encodeURIComponent(query)}`;
     return fetch(url)
-      .then((response) => {
+      .then(response => {
         if (!response.ok) {
           throw new Error("Network response was not ok");
         }
         return response.json();
       })
-      .then((data) => {
+      .then(data => {
         if (data && data.payload && data.payload.results) {
-          const filteredResults = data.payload.results.filter((item) =>
+          const filteredResults = data.payload.results.filter(item =>
             item.question.toLowerCase().includes(query)
           );
           this.displaySearchResults(filteredResults);
@@ -2238,7 +2275,7 @@ class QLiveChatWidget {
           this.clearSearchResults();
         }
       })
-      .catch((error) => {
+      .catch(error => {
         console.error("Error fetching FAQ suggestions:", error);
         this.clearSearchResults();
       });
@@ -2431,7 +2468,7 @@ class QLiveChatWidget {
 
     console.log("Request Body:", requestBody);
 
-    fetch(`${this.config.endpointChat}/${this.currentRoomId}/update-profile`, {
+    fetch(`${this.config.settings.chatEndpoint}/conversation/${this.currentRoomId}/update-profile`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
