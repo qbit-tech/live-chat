@@ -1752,7 +1752,7 @@ class QLiveChatWidget {
 
     console.log("Request Body:", requestBody);
 
-    fetch(`${this.config.settings.chatEndpoint}/conversation/start`, {
+    fetch(`${this.config.settings.chatEndpoint}start`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
@@ -1859,7 +1859,7 @@ class QLiveChatWidget {
         message: message,
       };
 
-      fetch(`${this.config.settings.chatEndpoint}/conversation/send-message`, {
+      fetch(`${this.config.settings.chatEndpoint}send-message`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
@@ -1983,7 +1983,7 @@ class QLiveChatWidget {
 
   switchToRealAgent() {
     fetch(
-      `${this.config.settings.chatEndpoint}/conversation/${this.currentRoomId}/start-live-agent`,
+      `${this.config.settings.chatEndpoint}${this.currentRoomId}/start-live-agent`,
       {
         method: "POST",
         headers: {
@@ -2042,7 +2042,7 @@ class QLiveChatWidget {
     this.isNewConversation = true;
 
     if (this.currentConversationIndex !== null) {
-      fetch(`${this.config.settings.chatEndpoint}/conversation/${this.currentRoomId}/end`, {
+      fetch(`${this.config.settings.chatEndpoint}${this.currentRoomId}/end`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       })
@@ -2468,7 +2468,7 @@ class QLiveChatWidget {
 
     console.log("Request Body:", requestBody);
 
-    fetch(`${this.config.settings.chatEndpoint}/conversation/${this.currentRoomId}/update-profile`, {
+    fetch(`${this.config.settings.chatEndpoint}${this.currentRoomId}/update-profile`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
