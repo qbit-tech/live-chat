@@ -1194,7 +1194,7 @@ class QLiveChatWidget {
         <div class="new-conversation">
           <button id="new-conversation">New Conversation</button>
         </div>
-        <div id="chat-version" class="chat-version">Live Chat Widget v0.0.2</div>
+        <div id="chat-version" class="chat-version">Live Chat Widget v0.0.3</div>
       </div>
     `;
   }
@@ -1832,6 +1832,8 @@ class QLiveChatWidget {
       button.style.display = "inline-block";
     });
     this.updateChatHeaderTitle();
+
+    localStorage.setItem("chatMode", "openai");
   }
 
   handleUserSubmit() {
@@ -1962,6 +1964,8 @@ class QLiveChatWidget {
   }
 
   appendMessage(type, content, timestamp) {
+    console.log("Appending message:", { type, content, timestamp });
+
     const existingMessageElement = Array.from(
       this.chatElements.chatMessages.children
     ).find((messageElement) => {
@@ -1974,6 +1978,11 @@ class QLiveChatWidget {
     });
 
     if (existingMessageElement) {
+      console.log("Message already exists in DOM, skipping:", {
+        type,
+        content,
+        timestamp,
+      });
       return;
     }
 
@@ -2048,6 +2057,19 @@ class QLiveChatWidget {
   }
 
   switchToRealAgent() {
+    console.log("Switching to real agent...");
+
+    let openaiMessageCount =
+      this.conversationHistory[this.currentConversationIndex].messages.length;
+    console.log("Original OpenAI message count:", openaiMessageCount);
+
+    // Hardcode -2 untuk mengurangi gap
+    openaiMessageCount -= 2;
+
+    // console.log("Adjusted OpenAI message count with -2:", openaiMessageCount);
+
+    localStorage.setItem("openaiMessageCount", openaiMessageCount);
+
     fetch(
       `${this.config.settings.chatEndpoint}${this.currentRoomId}/start-live-agent`,
       {
@@ -2059,11 +2081,14 @@ class QLiveChatWidget {
     )
       .then((response) => response.json())
       .then((data) => {
+        console.log("Switched to real agent. Response data:", data);
         this.chatMode = "agent";
         this.isLiveAgentSession = true;
         this.updateCurrentConversationStatus("Live Agent");
         this.resetChatMessages();
         this.startLiveAgentFetching();
+
+        localStorage.setItem("chatMode", "agent");
 
         this.reply(
           "You have been transferred to a real agent. Please start your conversation."
@@ -2078,6 +2103,8 @@ class QLiveChatWidget {
         if (optionElement) {
           optionElement.remove();
         }
+
+        this.fetchLiveAgentMessages();
       })
       .catch((error) => console.error("Error switching to real agent:", error));
   }
@@ -2140,6 +2167,7 @@ class QLiveChatWidget {
             localStorage.removeItem("currentRoomId");
             localStorage.removeItem("userId");
             localStorage.removeItem(this.messageCountKey);
+            localStorage.removeItem("openaiMessageCount");
 
             this.conversationHistory[
               this.currentConversationIndex
@@ -2630,7 +2658,7 @@ class QLiveChatWidget {
     this.liveAgentFetchInterval = setInterval(() => {
       console.log("Fetching live agent messages...");
       this.fetchLiveAgentMessages();
-    }, 5000);
+    }, 10000);
   }
 
   fetchLiveAgentMessages() {
@@ -2670,17 +2698,29 @@ class QLiveChatWidget {
   }
 
   shouldDisplayNewMessages(newMessages) {
+    console.log("New messages from server:", newMessages);
+    console.log("Total new messages count:", newMessages.length);
+
+    const openaiMessageCount =
+      parseInt(localStorage.getItem("openaiMessageCount"), 10) || 0;
+    console.log("OpenAI Message Count:", openaiMessageCount);
+
     const lastMessageCount = parseInt(
       localStorage.getItem(this.messageCountKey) || "0",
       10
     );
+    console.log("Last Message Count:", lastMessageCount);
+
     const newMessageCount = newMessages.length;
 
-    if (newMessageCount > lastMessageCount) {
-      const messagesToDisplay = newMessages.slice(lastMessageCount);
-      messagesToDisplay.forEach((message) => {
+    const filteredMessages = newMessages.slice(openaiMessageCount);
+    console.log("Filtered Messages:", filteredMessages);
+
+    if (filteredMessages.length > 0) {
+      filteredMessages.forEach((message) => {
         const localUserId = localStorage.getItem("userId");
         const messageType = message.userId === localUserId ? "user" : "reply";
+        console.log("Processing message:", message);
 
         const existingMessage = this.conversationHistory[
           this.currentConversationIndex
@@ -2690,12 +2730,15 @@ class QLiveChatWidget {
         );
 
         if (!existingMessage) {
+          console.log("Appending new message:", message);
           this.appendMessage(messageType, message.message, message.createdAt);
           this.updateCurrentConversation(
             message.message,
             messageType,
             message.createdAt
           );
+        } else {
+          console.log("Message already exists, skipping:", message);
         }
       });
 
