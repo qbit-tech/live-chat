@@ -1755,7 +1755,6 @@ class QLiveChatWidget {
     }
 
     this.isRequestPending = true;
-
     this.hasOfferedRealAgent = false;
     this.isNewConversation = true;
 
@@ -1800,9 +1799,58 @@ class QLiveChatWidget {
           this.currentConversationIndex = this.conversationHistory.length - 1;
           this.startConversation();
           this.reply("Hello! How can I assist you today?");
+
           if (initialMessage) {
-            this.onUserRequest(initialMessage);
+            const url = `${this.config.settings.chatEndpoint}get-messages?roomId=${this.currentRoomId}`;
+            const messageTimestamp = new Date().toISOString();
+            this.appendMessage("user", initialMessage, messageTimestamp);
+            console.log("Fetching latest messages from URL:", url);
+
+            fetch(url, {
+              method: "GET",
+              headers: { "Content-Type": "application/json" },
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                if (data.payload && data.payload.length > 0) {
+                  const lastMessage = data.payload[data.payload.length - 1]; // Dapatkan pesan terakhir dari array pesan
+
+                  if (lastMessage) {
+                    const messageType =
+                      lastMessage.senderId === localStorage.getItem("userId")
+                        ? "user"
+                        : "reply";
+                    this.appendMessage(
+                      messageType,
+                      lastMessage.message,
+                      lastMessage.createdAt
+                    );
+                    this.updateCurrentConversation(
+                      lastMessage.message,
+                      messageType,
+                      lastMessage.createdAt
+                    );
+                  }
+                } else {
+                  console.warn("No messages found in the conversation.");
+                }
+              })
+              .catch((error) =>
+                console.error("Error fetching latest messages:", error)
+              )
+              .finally(() => {
+                if (!this.hasOfferedRealAgent) {
+                  this.offerRealAgentOption();
+                  this.hasOfferedRealAgent = true;
+                }
+              });
+          } else {
+            if (!this.hasOfferedRealAgent) {
+              this.offerRealAgentOption();
+              this.hasOfferedRealAgent = true;
+            }
           }
+
           this.updateConversationList();
           this.saveConversationHistory();
           this.checkActiveConversations();
@@ -1841,35 +1889,7 @@ class QLiveChatWidget {
     if (!message) return;
     this.chatElements.chatInput.value = "";
 
-    const userId = localStorage.getItem("userId");
-    const requestBody = {
-      roomId: this.currentRoomId,
-      senderId: userId,
-      message: message,
-    };
-
-    fetch(`${this.config.settings.chatEndpoint}send-message`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestBody),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (this.isLiveAgentSession) {
-          this.appendMessage("user", message, new Date().toISOString());
-        } else {
-          this.onUserRequest(message);
-        }
-        const currentMessageCount = parseInt(
-          localStorage.getItem(this.messageCountKey) || "0",
-          10
-        );
-        localStorage.setItem(
-          this.messageCountKey,
-          (currentMessageCount + 1).toString()
-        );
-      })
-      .catch((error) => console.error("Error sending message:", error));
+    this.onUserRequest(message);
   }
 
   handleKeyUp(event) {
@@ -1890,12 +1910,11 @@ class QLiveChatWidget {
 
     const loaderElement = document.createElement("div");
     loaderElement.className = "loader";
-
     const lastBotMessage = document.createElement("div");
     lastBotMessage.className = "message reply";
     lastBotMessage.innerHTML = `
-      <div class="bubble"></div>
-      <img src="https://cdn.jsdelivr.net/gh/qbit-tech/live-chat/assets/bot.png" alt="bot" class="bubble-icon" width="30" height="30">
+        <div class="bubble"></div>
+        <img src="https://cdn.jsdelivr.net/gh/qbit-tech/live-chat/assets/bot.png" alt="bot" class="bubble-icon" width="30" height="30">
     `;
     const bubbleElement = lastBotMessage.querySelector(".bubble");
     bubbleElement.appendChild(loaderElement);
@@ -1906,7 +1925,7 @@ class QLiveChatWidget {
     if (this.chatMode === "openai") {
       const requestBody = {
         roomId: this.currentRoomId,
-        senderId: this.config.settings.botId,
+        senderId: localStorage.getItem("userId"),
         message: message,
       };
 
@@ -1952,14 +1971,6 @@ class QLiveChatWidget {
             this.hasOfferedRealAgent = true;
           }
         });
-    } else if (this.chatMode === "agent") {
-      const adminResponse = "This is a response from the live agent.";
-      bubbleElement.removeChild(loaderElement);
-      this.reply(adminResponse);
-
-      if (!bubbleElement.textContent.trim()) {
-        lastBotMessage.removeChild(bubbleElement);
-      }
     }
   }
 
@@ -2063,10 +2074,8 @@ class QLiveChatWidget {
       this.conversationHistory[this.currentConversationIndex].messages.length;
     console.log("Original OpenAI message count:", openaiMessageCount);
 
-    // Hardcode -2 untuk mengurangi gap
-    openaiMessageCount -= 2;
-
-    // console.log("Adjusted OpenAI message count with -2:", openaiMessageCount);
+    // Hardcode -3 untuk mengurangi gap sementara
+    openaiMessageCount -= 3;
 
     localStorage.setItem("openaiMessageCount", openaiMessageCount);
 
