@@ -12,22 +12,14 @@
       <h1 class="title">Chat Widget</h1>
     </div>
     <script>
-      window.onload = function() {
+      window.onload = function () {
         const widget = new QLiveChatWidget({
-          botId: "bot_5e03e0ea-7568-46fa-9b70-826e3999b548",
-          endpointFAQ: "https://base-api-development.qbit.co.id/faqs",
-          endpointChat: "https://base-api-development.qbit.co.id/live-chat",
-          user: {
-            name: "",
-            email: "",
-            phone: "",
-          },
+          widgetId: "qlcw_087c7e03-d9b0-453a-a2a7-6d58071dbe9e",
+          endpointWidget: "http://localhost:3001/live-chat/widget",
         });
-        
+
         widget.init();
       };
     </script>
-    
-    
   </body>
 </html>

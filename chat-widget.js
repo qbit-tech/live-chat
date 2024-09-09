@@ -6,15 +6,56 @@ class QLiveChatWidget {
     this.currentConversationIndex = null;
     this.isRequestPending = false;
     this.hasOfferedRealAgent = false;
-    this.isNewConversation = true; 
+    this.isNewConversation = true;
+    this.isLiveAgentSession = false;
+    this.liveAgentFetchInterval = null;
   }
 
-  init() {
-    this.injectCSS();
-    this.setupWidget();
-    this.loadConversationHistory();
-    this.addEventListeners();
-    this.checkActiveConversations();
+  async init() {
+    try {
+      const widgetConfig = await this.fetchWidgetConfig(this.config.widgetId);
+      this.config = { ...this.config, settings: widgetConfig };
+
+      console.log("Final Widget Config:", this.config);
+
+      if (
+        !this.config.settings.botId ||
+        !this.config.settings.faqEndpoint ||
+        !this.config.settings.chatEndpoint
+      ) {
+        throw new Error("Missing essential widget settings.");
+      }
+
+      this.injectCSS();
+      this.setupWidget();
+      this.loadConversationHistory();
+      this.addEventListeners();
+      this.checkActiveConversations();
+    } catch (error) {
+      console.error("Failed to initialize the widget:", error);
+    }
+  }
+
+  async fetchWidgetConfig(widgetId) {
+    const response = await fetch(`${this.config.endpointWidget}/${widgetId}`);
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch widget configuration: ${response.statusText}`
+      );
+    }
+    const data = await response.json();
+    console.log("Fetched Widget Config:", data);
+
+    const settings = {
+      ...data.payload.settings,
+      botId: data.payload.defaultBotId,
+    };
+
+    console.log("FAQ Endpoint:", settings.faqEndpoint);
+    console.log("Chat Endpoint:", settings.chatEndpoint);
+    console.log("Bot ID:", settings.botId);
+
+    return settings;
   }
 
   injectCSS() {
@@ -425,7 +466,7 @@ class QLiveChatWidget {
       .conversation-action {
         display: flex;
         flex-direction: column;
-        align-items: center;
+        align-items: end;
       }
 
       .conversation-action .btn-active {
@@ -433,6 +474,7 @@ class QLiveChatWidget {
         border: none;
         padding: 0;
         padding-top: 0;
+        padding-right: 0.75rem;
         border-radius: 50%;
         cursor: pointer;
         transition: background-color 0.3s ease, transform 0.3s ease, opacity 0.3s ease;
@@ -471,9 +513,9 @@ class QLiveChatWidget {
       .search-box {
         display: flex;
         margin: 1rem;
-        margin-top: -1.5rem;
+        margin-top: -5%;
         width: 90%;
-        height: 9%;
+        height: 10%;
         box-shadow: -5px -5px 10px rgba(0, 0, 0, 0.1), 5px 5px 10px rgba(0, 0, 0, 0.1),
           0px 0px 15px rgba(0, 0, 0, 0.2);
         transition: box-shadow 0.3s ease;
@@ -503,7 +545,8 @@ class QLiveChatWidget {
 
       .new-conversation {
         width: 90%;
-        margin-bottom: 1rem;
+        z-index: 99;
+        // margin-bottom: 1rem;
       }
 
       .new-conversation button {
@@ -586,7 +629,7 @@ class QLiveChatWidget {
         box-shadow: -4px 4px 8px rgba(0, 0, 0, 0.1), 4px 4px 8px rgba(0, 0, 0, 0.1),
           0px 8px 12px rgba(0, 0, 0, 0.15);
         border-radius: 0.375rem;
-        margin-top: 3.3rem;
+        margin-top: 3rem;
         max-height: 15rem;
         overflow-y: auto;
         width: 75%;
@@ -974,6 +1017,88 @@ class QLiveChatWidget {
         padding-top: 10px;
       }
 
+      .chat-version {
+        text-align: center;
+        font-size: 0.75rem;
+        color: var(--color-text-secondary);
+        padding: 0.5rem;
+        background-color: var(--color-tertiary);
+        border-top: 1px solid var(--color-tertiary);
+        border-bottom-left-radius: 1rem;
+        border-bottom-right-radius: 1rem;
+        position: relative;
+      }
+
+      .loader {
+        width: 20px;
+        aspect-ratio: 1;
+        --_g: no-repeat radial-gradient(circle closest-side, var(--color-text-secondary) 90%, #0000);
+        background: 
+          var(--_g) 0%   50%,
+          var(--_g) 50%  50%,
+          var(--_g) 100% 50%;
+        background-size: calc(100%/3) 50%;
+        animation: l3 1s infinite linear;
+      }
+
+      @keyframes l3 {
+        20%{background-position:0%   0%, 50%  50%,100%  50%}
+        40%{background-position:0% 100%, 50%   0%,100%  50%}
+        60%{background-position:0%  50%, 50% 100%,100%   0%}
+        80%{background-position:0%  50%, 50%  50%,100% 100%}
+      }
+
+      .modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: var(--color-secondary);
+        padding: 1.5rem;
+        width: 75%;
+        border-radius: 0.5rem;
+        box-shadow: -5px -5px 10px rgba(0, 0, 0, 0.1), 5px 5px 10px rgba(0, 0, 0, 0.1),
+          0px 0px 15px rgba(0, 0, 0, 0.2);
+        z-index: 1001;
+      }
+
+      .modal-content {
+          text-align: center;
+      }
+
+      .modal h3 {
+          margin-bottom: 1rem;
+      }
+
+      .modal p {
+          margin-bottom: 1.5rem;
+      }
+
+      .modal-btn-yes, .modal-btn-no {
+          color: var(--color-icon);
+          border: none;
+          padding: 0.5rem 1rem;
+          border-radius: 0.375rem;
+          cursor: pointer;
+          margin: 0 0.5rem;
+      }
+
+      .modal-btn-yes{
+        background-color: var(--color-danger);
+      }
+
+      .modal-btn-yes:hover {
+          background-color: var(--color-danger-dark);
+      }
+
+      .modal-btn-no{
+        background-color: var(--color-primary);
+      }
+
+      .modal-btn-no:hover {
+          background-color: var(--color-primary-dark);
+      }
+
       @media (max-width: 768px) {
         .chat-popup {
           width: 100%;
@@ -1045,6 +1170,7 @@ class QLiveChatWidget {
         ${this.getChatMessagesHTML()}
         ${this.getEditUserPageHTML()}
         ${this.getEmailTranscriptPageHTML()}
+        ${this.getEndConversationModalHTML()}
       </div>
     `;
   }
@@ -1060,7 +1186,7 @@ class QLiveChatWidget {
             <p>Need help? Search our help center for answers or start a conversation:</p>
         </div>
         <div class="search-box">
-          <input type="text" placeholder="Search for answers" />
+          <input type="text" placeholder="Search from Faqs" />
           <button class="search-button">Search</button>
           <div class="search-results-container"></div>
         </div>
@@ -1068,6 +1194,7 @@ class QLiveChatWidget {
         <div class="new-conversation">
           <button id="new-conversation">New Conversation</button>
         </div>
+        <div id="chat-version" class="chat-version">Live Chat Widget v0.0.3</div>
       </div>
     `;
   }
@@ -1255,6 +1382,19 @@ class QLiveChatWidget {
     `;
   }
 
+  getEndConversationModalHTML() {
+    return `
+        <div id="end-conversation-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3>End Conversation</h3>
+                <p>Are you sure you want to end this conversation?</p>
+                <button id="confirm-end-conversation" class="modal-btn-yes">Yes</button>
+                <button id="cancel-end-conversation" class="modal-btn-no">No</button>
+            </div>
+        </div>
+    `;
+  }
+
   cacheChatElements() {
     this.chatElements = {
       chatInput: document.getElementById("chat-input"),
@@ -1288,6 +1428,13 @@ class QLiveChatWidget {
       closeChatPopupButton: document.getElementById("close-chat-popup"),
       searchBox: document.querySelector(".search-box"),
       endConversationButton: document.getElementById("end-conversation"),
+      confirmEndConversationButton: document.getElementById(
+        "confirm-end-conversation"
+      ),
+      cancelEndConversationButton: document.getElementById(
+        "cancel-end-conversation"
+      ),
+      endConversationModal: document.getElementById("end-conversation-modal"),
     };
   }
 
@@ -1361,8 +1508,32 @@ class QLiveChatWidget {
 
     this.chatElements.endConversationButton.addEventListener(
       "click",
+      this.showEndConversationModal.bind(this)
+    );
+
+    this.chatElements.confirmEndConversationButton.addEventListener(
+      "click",
       this.endCurrentConversation.bind(this)
     );
+
+    this.chatElements.cancelEndConversationButton.addEventListener(
+      "click",
+      this.hideEndConversationModal.bind(this)
+    );
+  }
+
+  showEndConversationModal() {
+    const modal = this.chatElements.endConversationModal;
+    if (modal) {
+      modal.classList.remove("hidden");
+    }
+  }
+
+  hideEndConversationModal() {
+    const modal = this.chatElements.endConversationModal;
+    if (modal) {
+      modal.classList.add("hidden");
+    }
   }
 
   handleResize() {
@@ -1385,7 +1556,8 @@ class QLiveChatWidget {
     this.chatElements.chatPopup.classList.remove("hidden");
     this.chatElements.chatPopup.classList.add("visible");
     this.chatElements.chatIcon.style.transform = "rotate(180deg)";
-    this.chatElements.chatIcon.src = "https://cdn.jsdelivr.net/gh/qbit-tech/live-chat/assets/delete.svg";
+    this.chatElements.chatIcon.src =
+      "https://cdn.jsdelivr.net/gh/qbit-tech/live-chat/assets/delete.svg";
     this.chatElements.chatInput.focus();
     if (window.innerWidth <= 768) {
       this.chatElements.chatBubble.classList.add("hidden");
@@ -1394,13 +1566,19 @@ class QLiveChatWidget {
 
   closeChatPopup() {
     this.chatElements.chatIcon.style.transform = "rotate(0)";
-    this.chatElements.chatIcon.src = "https://cdn.jsdelivr.net/gh/qbit-tech/live-chat/assets/customer-service.svg";
+    this.chatElements.chatIcon.src =
+      "https://cdn.jsdelivr.net/gh/qbit-tech/live-chat/assets/customer-service.svg";
     this.chatElements.chatPopup.classList.add("closing");
     this.chatElements.chatPopup.addEventListener(
       "animationend",
       this.onPopupCloseAnimationEnd.bind(this),
       { once: true }
     );
+    if (this.isLiveAgentSession) {
+      clearInterval(this.liveAgentFetchInterval);
+      this.liveAgentFetchInterval = null;
+    }
+
     if (window.innerWidth <= 768) {
       this.chatElements.chatBubble.classList.remove("hidden");
     }
@@ -1436,6 +1614,11 @@ class QLiveChatWidget {
   }
 
   resetToLandingPage() {
+    if (this.isLiveAgentSession) {
+      clearInterval(this.liveAgentFetchInterval);
+      this.liveAgentFetchInterval = null;
+    }
+
     this.chatElements.landingPage.classList.remove("hidden");
     this.chatElements.chatHeader.classList.add("hidden");
     this.chatElements.chatMessages.classList.add("hidden");
@@ -1527,21 +1710,22 @@ class QLiveChatWidget {
     const name = localStorage.getItem("userName") || "";
     const email = localStorage.getItem("userEmail") || "";
     const phone = localStorage.getItem("userPhone") || "";
-    const message = document.getElementById("message-confirmation").value.trim();
+    const message = document
+      .getElementById("message-confirmation")
+      .value.trim();
 
     if (!message) {
-        console.error("Message is missing.");
-        return;
+      console.error("Message is missing.");
+      return;
     }
 
     if (!name || !email || !phone) {
-        console.error("Profile data is missing.");
-        return;
+      console.error("Profile data is missing.");
+      return;
     }
 
     this.startNewConversation(name, email, phone, message);
-}
-
+  }
 
   handleFormSubmit(event) {
     event.preventDefault();
@@ -1556,8 +1740,7 @@ class QLiveChatWidget {
     localStorage.setItem("userPhone", phone);
 
     this.startNewConversation(name, email, phone, message);
-}
-
+  }
 
   saveFormValues(name, email, phone) {
     localStorage.setItem("userName", name);
@@ -1567,74 +1750,126 @@ class QLiveChatWidget {
 
   startNewConversation(name, email, phone, initialMessage) {
     if (this.isRequestPending) {
-        console.warn("A request is already in progress. Please wait.");
-        return;
+      console.warn("A request is already in progress. Please wait.");
+      return;
     }
 
     this.isRequestPending = true;
-
     this.hasOfferedRealAgent = false;
     this.isNewConversation = true;
 
     const requestBody = {
-        profile: { name, email, phone },
-        botId: this.config.botId,
-        message: initialMessage,
+      profile: { name, email, phone },
+      botId: this.config.settings.botId,
+      message: initialMessage,
     };
 
-    console.log('Request Body:', requestBody);
-
-    fetch(`${this.config.endpointChat}/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
+    fetch(`${this.config.settings.chatEndpoint}start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
     })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Response Data:', data);
-        if (data.payload && data.payload.roomId) {
-            this.currentRoomId = data.payload.roomId;
-            console.log('Room ID:', this.currentRoomId);
+      .then((response) => response.json())
+      .then((data) => {
+        if (
+          data.payload &&
+          data.payload.roomId &&
+          data.payload.metaCreatedByUser &&
+          data.payload.metaCreatedByUser.userId
+        ) {
+          this.currentRoomId = data.payload.roomId;
+          this.messageCountKey = `messageCount_${this.currentRoomId}`;
+          const userId = data.payload.metaCreatedByUser.userId;
+          localStorage.setItem("currentRoomId", this.currentRoomId);
+          localStorage.setItem("userId", userId);
 
-            this.resetChatMessages();
+          console.log(`Room ID: ${this.currentRoomId}`);
+          console.log(`User ID: ${userId}`);
 
-            localStorage.setItem("userName", name);
-            localStorage.setItem("userEmail", email);
-            localStorage.setItem("userPhone", phone);
+          this.resetChatMessages();
+          const timestamp = new Date().toISOString();
+          this.conversationHistory.push({
+            status: "OpenAI",
+            preview: "New conversation started...",
+            timestamp,
+            active: true,
+            messages: [],
+            roomId: data.payload.roomId,
+          });
+          this.currentConversationIndex = this.conversationHistory.length - 1;
+          this.startConversation();
+          this.reply("Hello! How can I assist you today?");
 
-            const timestamp = new Date().toISOString();
-            this.conversationHistory.push({
-                status: "OpenAI",
-                preview: "New conversation started...",
-                timestamp,
-                active: true,
-                messages: [],
-                roomId: data.payload.roomId,
-            });
-            this.currentConversationIndex = this.conversationHistory.length - 1;
-            this.startConversation();
-            this.reply("Hello! How can I assist you today?");
-            if (initialMessage) {
-                this.onUserRequest(initialMessage);
+          if (initialMessage) {
+            const url = `${this.config.settings.chatEndpoint}get-messages?roomId=${this.currentRoomId}`;
+            const messageTimestamp = new Date().toISOString();
+            this.appendMessage("user", initialMessage, messageTimestamp);
+            console.log("Fetching latest messages from URL:", url);
+
+            fetch(url, {
+              method: "GET",
+              headers: { "Content-Type": "application/json" },
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                if (data.payload && data.payload.length > 0) {
+                  const lastMessage = data.payload[data.payload.length - 1]; // Dapatkan pesan terakhir dari array pesan
+
+                  if (lastMessage) {
+                    const messageType =
+                      lastMessage.senderId === localStorage.getItem("userId")
+                        ? "user"
+                        : "reply";
+                    this.appendMessage(
+                      messageType,
+                      lastMessage.message,
+                      lastMessage.createdAt
+                    );
+                    this.updateCurrentConversation(
+                      lastMessage.message,
+                      messageType,
+                      lastMessage.createdAt
+                    );
+                  }
+                } else {
+                  console.warn("No messages found in the conversation.");
+                }
+              })
+              .catch((error) =>
+                console.error("Error fetching latest messages:", error)
+              )
+              .finally(() => {
+                if (!this.hasOfferedRealAgent) {
+                  this.offerRealAgentOption();
+                  this.hasOfferedRealAgent = true;
+                }
+              });
+          } else {
+            if (!this.hasOfferedRealAgent) {
+              this.offerRealAgentOption();
+              this.hasOfferedRealAgent = true;
             }
-            this.updateConversationList();
-            this.saveConversationHistory();
-            this.checkActiveConversations();
+          }
+
+          this.updateConversationList();
+          this.saveConversationHistory();
+          this.checkActiveConversations();
         } else {
-            console.error("Failed to start conversation: Invalid payload or roomId missing", data);
+          console.error(
+            "Failed to start conversation: Invalid payload or userId missing",
+            data
+          );
         }
-    })
-    .catch(error => console.error("Error starting conversation:", error))
-    .finally(() => {
+      })
+      .catch((error) => console.error("Error starting conversation:", error))
+      .finally(() => {
         this.isRequestPending = false;
-    });
-}
-
-
-
-
+      });
+  }
 
   startConversation() {
+    this.messageCountKey = `messageCount_${this.currentRoomId}`;
+
     this.chatElements.landingPage.classList.add("hidden");
     this.chatElements.userFormPage.classList.add("hidden");
     this.chatElements.chatHeader.classList.remove("hidden");
@@ -1645,12 +1880,15 @@ class QLiveChatWidget {
       button.style.display = "inline-block";
     });
     this.updateChatHeaderTitle();
+
+    localStorage.setItem("chatMode", "openai");
   }
 
   handleUserSubmit() {
     const message = this.chatElements.chatInput.value.trim();
     if (!message) return;
     this.chatElements.chatInput.value = "";
+
     this.onUserRequest(message);
   }
 
@@ -1662,70 +1900,115 @@ class QLiveChatWidget {
 
   onUserRequest(message) {
     if (this.isNewConversation) {
-        this.hasOfferedRealAgent = false;
-        this.isNewConversation = false;
+      this.hasOfferedRealAgent = false;
+      this.isNewConversation = false;
     }
 
     const messageTimestamp = new Date().toISOString();
     this.appendMessage("user", message, messageTimestamp);
     this.updateCurrentConversation(message, "user", messageTimestamp);
 
+    const loaderElement = document.createElement("div");
+    loaderElement.className = "loader";
+    const lastBotMessage = document.createElement("div");
+    lastBotMessage.className = "message reply";
+    lastBotMessage.innerHTML = `
+        <div class="bubble"></div>
+        <img src="https://cdn.jsdelivr.net/gh/qbit-tech/live-chat/assets/bot.png" alt="bot" class="bubble-icon" width="30" height="30">
+    `;
+    const bubbleElement = lastBotMessage.querySelector(".bubble");
+    bubbleElement.appendChild(loaderElement);
+    this.chatElements.chatMessages.appendChild(lastBotMessage);
+    this.chatElements.chatMessages.scrollTop =
+      this.chatElements.chatMessages.scrollHeight;
+
     if (this.chatMode === "openai") {
-        const requestBody = {
-            roomId: this.currentRoomId,
-            senderId: this.config.botId,
-            message: message,
-        };
+      const requestBody = {
+        roomId: this.currentRoomId,
+        senderId: localStorage.getItem("userId"),
+        message: message,
+      };
 
-        console.log('Request Body:', requestBody);
+      fetch(`${this.config.settings.chatEndpoint}send-message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then((data) => {
+          bubbleElement.removeChild(loaderElement);
 
-        fetch(`${this.config.endpointChat}/send-message`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody),
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Response Data:', data);
+          if (data && data.payload && data.payload.message) {
+            this.reply(data.payload.message);
+          } else {
+            this.reply(
+              "Failed to receive a proper response from the bot. Please try again later."
+            );
+            console.error("Failed to receive message:", data);
+          }
 
-            if (data && data.payload && data.payload.message) {
-                this.reply(data.payload.message);
-            } else {
-                this.reply("Failed to receive a proper response from the bot. Please try again later.");
-                console.error("Failed to receive message:", data);
-            }
+          if (!bubbleElement.textContent.trim()) {
+            lastBotMessage.removeChild(bubbleElement);
+          }
         })
-        .catch(error => {
-            console.error("Error sending message:", error);
-            this.reply(`Error: ${error.message}`);
+        .catch((error) => {
+          console.error("Error sending message:", error);
+          bubbleElement.removeChild(loaderElement);
+          this.reply(`Error: ${error.message}`);
+
+          if (!bubbleElement.textContent.trim()) {
+            lastBotMessage.removeChild(bubbleElement);
+          }
         })
         .finally(() => {
-            if (!this.hasOfferedRealAgent) {
-                this.offerRealAgentOption();
-                this.hasOfferedRealAgent = true;
-            }
+          if (!this.hasOfferedRealAgent) {
+            this.offerRealAgentOption();
+            this.hasOfferedRealAgent = true;
+          }
         });
-    } else if (this.chatMode === "agent") {
-        const adminResponse = "This is a response from the live agent.";
-        this.reply(adminResponse);
     }
-}
+  }
 
   appendMessage(type, content, timestamp) {
+    console.log("Appending message:", { type, content, timestamp });
+
+    const existingMessageElement = Array.from(
+      this.chatElements.chatMessages.children
+    ).find((messageElement) => {
+      const bubbleElement = messageElement.querySelector(".bubble");
+      return (
+        bubbleElement &&
+        bubbleElement.textContent.trim() === content &&
+        bubbleElement.dataset.timestamp === timestamp
+      );
+    });
+
+    if (existingMessageElement) {
+      console.log("Message already exists in DOM, skipping:", {
+        type,
+        content,
+        timestamp,
+      });
+      return;
+    }
+
     const messageElement = document.createElement("div");
     messageElement.className = `message ${type}`;
 
     let imageSrc = "";
     if (type === "user") {
-      imageSrc = "https://cdn.jsdelivr.net/gh/qbit-tech/live-chat/assets/user.png";
+      imageSrc =
+        "https://cdn.jsdelivr.net/gh/qbit-tech/live-chat/assets/user.png";
     } else if (type === "reply") {
       imageSrc =
-        this.chatMode === "openai" ? "https://cdn.jsdelivr.net/gh/qbit-tech/live-chat/assets/bot.png" : "https://cdn.jsdelivr.net/gh/qbit-tech/live-chat/assets/admin.png";
+        this.chatMode === "openai"
+          ? "https://cdn.jsdelivr.net/gh/qbit-tech/live-chat/assets/bot.png"
+          : "https://cdn.jsdelivr.net/gh/qbit-tech/live-chat/assets/admin.png";
     }
 
     const previousMessage = this.chatElements.chatMessages.lastElementChild;
@@ -1738,13 +2021,15 @@ class QLiveChatWidget {
     }
 
     messageElement.innerHTML = `
-      <div class="bubble" data-timestamp="${timestamp}">${content}</div>
-      <img src="${imageSrc}" alt="${type}" class="bubble-icon" width="30" height="30">
+        <div class="bubble" data-timestamp="${timestamp}">${content}</div>
+        <img src="${imageSrc}" alt="${type}" class="bubble-icon" width="30" height="30">
     `;
 
     this.chatElements.chatMessages.appendChild(messageElement);
     this.chatElements.chatMessages.scrollTop =
       this.chatElements.chatMessages.scrollHeight;
+
+    this.updateCurrentConversation(content, type, timestamp);
   }
 
   reply(message) {
@@ -1754,42 +2039,84 @@ class QLiveChatWidget {
   }
 
   offerRealAgentOption() {
-    const optionElement = document.createElement("div");
-    optionElement.className = "message reply";
-    optionElement.innerHTML = `
-        <div class="bubble">
-            If you need further assistance, you can <button id="switch-agent" class="switch-agent-button">Chat with a real agent</button>.
-        </div>
-    `;
-    this.chatElements.chatMessages.appendChild(optionElement);
-    this.chatElements.chatMessages.scrollTop = this.chatElements.chatMessages.scrollHeight;
-    document.getElementById("switch-agent").addEventListener("click", this.switchToRealAgent.bind(this));
-}
+    if (this.currentConversationIndex !== null) {
+      const optionExists = !!document.querySelector(".switch-agent-button");
 
+      if (!optionExists) {
+        const optionElement = document.createElement("div");
+        optionElement.className = "message reply";
+        optionElement.innerHTML = `
+                <div class="bubble">
+                    If you need further assistance, you can <button id="switch-agent" class="switch-agent-button">Chat with a real agent</button>.
+                </div>
+                <img src="https://cdn.jsdelivr.net/gh/qbit-tech/live-chat/assets/bot.png" alt="bot" class="bubble-icon" width="30" height="30">
+            `;
+        this.chatElements.chatMessages.appendChild(optionElement);
+        this.chatElements.chatMessages.scrollTop =
+          this.chatElements.chatMessages.scrollHeight;
+
+        document
+          .getElementById("switch-agent")
+          .addEventListener("click", this.switchToRealAgent.bind(this));
+
+        this.conversationHistory[
+          this.currentConversationIndex
+        ].hasOfferedRealAgent = true;
+        this.saveConversationHistory();
+      }
+    }
+  }
 
   switchToRealAgent() {
-    fetch(`${this.config.endpointChat}/${this.currentRoomId}/start-live-agent`, {
-        method: 'POST',
+    console.log("Switching to real agent...");
+
+    let openaiMessageCount =
+      this.conversationHistory[this.currentConversationIndex].messages.length;
+    console.log("Original OpenAI message count:", openaiMessageCount);
+
+    // Hardcode -3 untuk mengurangi gap sementara
+    openaiMessageCount -= 3;
+
+    localStorage.setItem("openaiMessageCount", openaiMessageCount);
+
+    fetch(
+      `${this.config.settings.chatEndpoint}${this.currentRoomId}/start-live-agent`,
+      {
+        method: "POST",
         headers: {
-            'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-    })
-    .then(response => response.json())
-    .then(data => {
+      }
+    )
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Switched to real agent. Response data:", data);
         this.chatMode = "agent";
+        this.isLiveAgentSession = true;
         this.updateCurrentConversationStatus("Live Agent");
         this.resetChatMessages();
+        this.startLiveAgentFetching();
+
+        localStorage.setItem("chatMode", "agent");
+
         this.reply(
-            "You have been transferred to a real agent. Please start your conversation."
+          "You have been transferred to a real agent. Please start your conversation."
         );
         this.chatElements.chatInput.value = "";
         this.chatElements.chatInput.focus();
         this.updateConversationList();
         this.saveConversationHistory();
         this.updateChatHeaderTitle();
-    })
-    .catch(error => console.error("Error switching to real agent:", error));
-}
+
+        const optionElement = document.getElementById("switch-agent");
+        if (optionElement) {
+          optionElement.remove();
+        }
+
+        this.fetchLiveAgentMessages();
+      })
+      .catch((error) => console.error("Error switching to real agent:", error));
+  }
 
   resetChatMessages() {
     this.chatElements.chatMessages.innerHTML = "";
@@ -1797,6 +2124,10 @@ class QLiveChatWidget {
 
   resumeConversation(index) {
     this.currentConversationIndex = index;
+    this.currentRoomId =
+      this.conversationHistory[index].roomId ||
+      localStorage.getItem("currentRoomId");
+    this.messageCountKey = `messageCount_${this.currentRoomId}`;
     this.chatMode =
       this.conversationHistory[index].status === "OpenAI" ? "openai" : "agent";
     this.startConversation();
@@ -1804,6 +2135,12 @@ class QLiveChatWidget {
     this.conversationHistory[index].messages.forEach((message) =>
       this.appendMessage(message.type, message.content, message.timestamp)
     );
+
+    if (this.chatMode === "agent") {
+      this.isLiveAgentSession = true;
+      this.startLiveAgentFetching();
+    }
+
     if (this.conversationHistory[index].active) {
       this.chatElements.chatInputContainer.classList.remove("hidden");
       this.chatElements.chatEndedMessage.classList.add("hidden");
@@ -1816,36 +2153,50 @@ class QLiveChatWidget {
   }
 
   endCurrentConversation() {
-
     this.hasOfferedRealAgent = false;
     this.isNewConversation = true;
 
     if (this.currentConversationIndex !== null) {
-        fetch(`${this.config.endpointChat}/${this.currentRoomId}/end`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Response Data:', data);
-            if (data.code === 'success' && data.payload && data.payload.isSuccess) {
-                this.conversationHistory[this.currentConversationIndex].active = false;
-                this.updateConversationList();
-                this.saveConversationHistory();
-                this.chatElements.chatInputContainer.classList.add("hidden");
-                this.chatElements.chatEndedMessage.classList.remove("hidden");
-                this.resetToLandingPage();
-                this.checkActiveConversations();
-            } else {
-                console.error("Failed to end conversation:", data);
+      fetch(`${this.config.settings.chatEndpoint}${this.currentRoomId}/end`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (
+            data.code === "success" &&
+            data.payload &&
+            data.payload.isSuccess
+          ) {
+            if (this.liveAgentFetchInterval) {
+              clearInterval(this.liveAgentFetchInterval);
+              this.liveAgentFetchInterval = null;
             }
+            this.isLiveAgentSession = false;
+            localStorage.removeItem("currentRoomId");
+            localStorage.removeItem("userId");
+            localStorage.removeItem(this.messageCountKey);
+            localStorage.removeItem("openaiMessageCount");
+
+            this.conversationHistory[
+              this.currentConversationIndex
+            ].active = false;
+            this.updateConversationList();
+            this.saveConversationHistory();
+            this.chatElements.chatInputContainer.classList.add("hidden");
+            this.chatElements.chatEndedMessage.classList.remove("hidden");
+            this.resetToLandingPage();
+            this.checkActiveConversations();
+          } else {
+            console.error("Failed to end conversation:", data);
+          }
         })
-        .catch(error => console.error("Error ending conversation:", error));
+        .catch((error) => console.error("Error ending conversation:", error))
+        .finally(() => {
+          this.hideEndConversationModal();
+        });
     }
-}
-
-
-
+  }
 
   updateConversationList() {
     this.chatElements.conversationList.innerHTML = "";
@@ -1883,9 +2234,11 @@ class QLiveChatWidget {
     let iconSrc = "";
 
     if (conversation.status === "OpenAI") {
-      iconSrc = "https://cdn.jsdelivr.net/gh/qbit-tech/live-chat/assets/bot.png";
+      iconSrc =
+        "https://cdn.jsdelivr.net/gh/qbit-tech/live-chat/assets/bot.png";
     } else if (conversation.status === "Live Agent") {
-      iconSrc = "https://cdn.jsdelivr.net/gh/qbit-tech/live-chat/assets/admin.png";
+      iconSrc =
+        "https://cdn.jsdelivr.net/gh/qbit-tech/live-chat/assets/admin.png";
     }
 
     const lastMessage =
@@ -1933,6 +2286,11 @@ class QLiveChatWidget {
         content: message,
         timestamp,
       });
+
+      this.conversationHistory[
+        this.currentConversationIndex
+      ].hasOfferedRealAgent = this.hasOfferedRealAgent;
+
       this.saveConversationHistory();
     }
   }
@@ -2023,7 +2381,9 @@ class QLiveChatWidget {
   }
 
   fetchFAQSuggestions(query) {
-    const url = `${this.config.endpointFAQ}?query=${encodeURIComponent(query)}`;
+    const url = `${this.config.settings.faqEndpoint}?query=${encodeURIComponent(
+      query
+    )}`;
     return fetch(url)
       .then((response) => {
         if (!response.ok) {
@@ -2217,8 +2577,8 @@ class QLiveChatWidget {
     event.preventDefault();
 
     if (!this.currentRoomId) {
-        console.error("Room ID is undefined. Cannot update profile.");
-        return;
+      console.error("Room ID is undefined. Cannot update profile.");
+      return;
     }
 
     const newName = document.getElementById("edit-name").value;
@@ -2226,36 +2586,36 @@ class QLiveChatWidget {
     const newPhone = document.getElementById("edit-phone").value;
 
     const requestBody = {
-        roomId: this.currentRoomId,
-        name: newName,
-        email: newEmail,
-        phone: newPhone,
+      roomId: this.currentRoomId,
+      name: newName,
+      email: newEmail,
+      phone: newPhone,
     };
 
-    console.log('Request Body:', requestBody);
+    console.log("Request Body:", requestBody);
 
-    fetch(`${this.config.endpointChat}/${this.currentRoomId}/update-profile`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+    fetch(
+      `${this.config.settings.chatEndpoint}${this.currentRoomId}/update-profile`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Response Data:', data);
-        if (data.code === 'success' && data.payload && data.payload.isSuccess) {
-            localStorage.setItem("userName", newName);
-            localStorage.setItem("userEmail", newEmail);
-            localStorage.setItem("userPhone", newPhone);
-            this.backToChatFromEdit();
+      }
+    )
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Response Data:", data);
+        if (data.code === "success" && data.payload && data.payload.isSuccess) {
+          localStorage.setItem("userName", newName);
+          localStorage.setItem("userEmail", newEmail);
+          localStorage.setItem("userPhone", newPhone);
+          this.backToChatFromEdit();
         } else {
-            console.error("Failed to update profile:", data);
+          console.error("Failed to update profile:", data);
         }
-    })
-    .catch(error => console.error("Error updating profile:", error));
-}
-
-
-
+      })
+      .catch((error) => console.error("Error updating profile:", error));
+  }
 
   backToChatFromEdit() {
     this.chatElements.editUserPage.classList.add("hidden");
@@ -2298,6 +2658,104 @@ class QLiveChatWidget {
     } else {
       this.showGoToLatestButton();
     }
+  }
+
+  startLiveAgentFetching() {
+    if (this.liveAgentFetchInterval) {
+      clearInterval(this.liveAgentFetchInterval);
+    }
+    this.liveAgentFetchInterval = setInterval(() => {
+      console.log("Fetching live agent messages...");
+      this.fetchLiveAgentMessages();
+    }, 10000);
+  }
+
+  fetchLiveAgentMessages() {
+    console.log("Attempting to fetch live agent messages...");
+    console.log("Current Room ID:", this.currentRoomId);
+    console.log("Is Live Agent Session:", this.isLiveAgentSession);
+
+    if (!this.currentRoomId || !this.isLiveAgentSession) {
+      console.log(
+        "Fetching aborted. Current Room ID:",
+        this.currentRoomId,
+        "Is Live Agent Session:",
+        this.isLiveAgentSession
+      );
+      return;
+    }
+
+    const url = `${this.config.settings.chatEndpoint}get-messages?roomId=${this.currentRoomId}`;
+    console.log("Fetching from URL:", url);
+
+    fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    })
+      .then((response) => {
+        console.log("Fetch response received:", response);
+        return response.json();
+      })
+      .then((data) => {
+        if (data.payload && data.payload.length > 0) {
+          this.shouldDisplayNewMessages(data.payload);
+        }
+      })
+      .catch((error) =>
+        console.error("Error fetching live agent messages:", error)
+      );
+  }
+
+  shouldDisplayNewMessages(newMessages) {
+    console.log("New messages from server:", newMessages);
+    console.log("Total new messages count:", newMessages.length);
+
+    const openaiMessageCount =
+      parseInt(localStorage.getItem("openaiMessageCount"), 10) || 0;
+    console.log("OpenAI Message Count:", openaiMessageCount);
+
+    const lastMessageCount = parseInt(
+      localStorage.getItem(this.messageCountKey) || "0",
+      10
+    );
+    console.log("Last Message Count:", lastMessageCount);
+
+    const newMessageCount = newMessages.length;
+
+    const filteredMessages = newMessages.slice(openaiMessageCount);
+    console.log("Filtered Messages:", filteredMessages);
+
+    if (filteredMessages.length > 0) {
+      filteredMessages.forEach((message) => {
+        const localUserId = localStorage.getItem("userId");
+        const messageType = message.userId === localUserId ? "user" : "reply";
+        console.log("Processing message:", message);
+
+        const existingMessage = this.conversationHistory[
+          this.currentConversationIndex
+        ].messages.find(
+          (m) =>
+            m.timestamp === message.createdAt && m.content === message.message
+        );
+
+        if (!existingMessage) {
+          console.log("Appending new message:", message);
+          this.appendMessage(messageType, message.message, message.createdAt);
+          this.updateCurrentConversation(
+            message.message,
+            messageType,
+            message.createdAt
+          );
+        } else {
+          console.log("Message already exists, skipping:", message);
+        }
+      });
+
+      localStorage.setItem(this.messageCountKey, newMessageCount.toString());
+      return true;
+    }
+
+    return false;
   }
 }
 
