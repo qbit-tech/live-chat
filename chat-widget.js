@@ -1194,7 +1194,7 @@ class QLiveChatWidget {
         <div class="new-conversation">
           <button id="new-conversation">New Conversation</button>
         </div>
-        <div id="chat-version" class="chat-version">Live Chat Widget v0.0.3</div>
+        <div id="chat-version" class="chat-version">Live Chat Widget v0.0.4</div>
       </div>
     `;
   }
@@ -1813,8 +1813,7 @@ class QLiveChatWidget {
               .then((response) => response.json())
               .then((data) => {
                 if (data.payload && data.payload.length > 0) {
-                  const lastMessage = data.payload[data.payload.length - 1]; // Dapatkan pesan terakhir dari array pesan
-
+                  const lastMessage = data.payload[data.payload.length - 1]; 
                   if (lastMessage) {
                     const messageType =
                       lastMessage.senderId === localStorage.getItem("userId")
@@ -1908,75 +1907,113 @@ class QLiveChatWidget {
     this.appendMessage("user", message, messageTimestamp);
     this.updateCurrentConversation(message, "user", messageTimestamp);
 
-    const loaderElement = document.createElement("div");
-    loaderElement.className = "loader";
-    const lastBotMessage = document.createElement("div");
-    lastBotMessage.className = "message reply";
-    lastBotMessage.innerHTML = `
+    let loaderElement, lastBotMessage, bubbleElement;
+    if (this.chatMode === "openai") {
+      loaderElement = document.createElement("div");
+      loaderElement.className = "loader";
+      lastBotMessage = document.createElement("div");
+      lastBotMessage.className = "message reply";
+      lastBotMessage.innerHTML = `
         <div class="bubble"></div>
         <img src="https://cdn.jsdelivr.net/gh/qbit-tech/live-chat/assets/bot.png" alt="bot" class="bubble-icon" width="30" height="30">
-    `;
-    const bubbleElement = lastBotMessage.querySelector(".bubble");
-    bubbleElement.appendChild(loaderElement);
-    this.chatElements.chatMessages.appendChild(lastBotMessage);
-    this.chatElements.chatMessages.scrollTop =
-      this.chatElements.chatMessages.scrollHeight;
+      `;
+      bubbleElement = lastBotMessage.querySelector(".bubble");
+      bubbleElement.appendChild(loaderElement);
+      this.chatElements.chatMessages.appendChild(lastBotMessage);
+      this.chatElements.chatMessages.scrollTop =
+        this.chatElements.chatMessages.scrollHeight;
+    }
 
     if (this.chatMode === "openai") {
-      const requestBody = {
-        roomId: this.currentRoomId,
-        senderId: localStorage.getItem("userId"),
-        message: message,
-      };
-
-      fetch(`${this.config.settings.chatEndpoint}send-message`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then((data) => {
-          bubbleElement.removeChild(loaderElement);
-
-          if (data && data.payload && data.payload.message) {
-            this.reply(data.payload.message);
-          } else {
-            this.reply(
-              "Failed to receive a proper response from the bot. Please try again later."
-            );
-            console.error("Failed to receive message:", data);
-          }
-
-          if (!bubbleElement.textContent.trim()) {
-            lastBotMessage.removeChild(bubbleElement);
-          }
-        })
-        .catch((error) => {
-          console.error("Error sending message:", error);
-          bubbleElement.removeChild(loaderElement);
-          this.reply(`Error: ${error.message}`);
-
-          if (!bubbleElement.textContent.trim()) {
-            lastBotMessage.removeChild(bubbleElement);
-          }
-        })
-        .finally(() => {
-          if (!this.hasOfferedRealAgent) {
-            this.offerRealAgentOption();
-            this.hasOfferedRealAgent = true;
-          }
-        });
+      this.sendMessageToOpenAI(
+        message,
+        loaderElement,
+        lastBotMessage,
+        bubbleElement
+      );
+    } else if (this.chatMode === "agent") {
+      this.sendMessageToLiveAgent(message);
     }
   }
 
-  appendMessage(type, content, timestamp) {
-    console.log("Appending message:", { type, content, timestamp });
+  sendMessageToOpenAI(message, loaderElement, lastBotMessage, bubbleElement) {
+    const requestBody = {
+      roomId: this.currentRoomId,
+      senderId: localStorage.getItem("userId"),
+      message: message,
+    };
 
+    fetch(`${this.config.settings.chatEndpoint}send-message`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        bubbleElement.removeChild(loaderElement);
+
+        if (data && data.payload && data.payload.message) {
+          this.reply(data.payload.message);
+        } else {
+          this.reply(
+            "Failed to receive a proper response from the bot. Please try again later."
+          );
+          console.error("Failed to receive message:", data);
+        }
+
+        if (!bubbleElement.textContent.trim()) {
+          lastBotMessage.removeChild(bubbleElement);
+        }
+      })
+      .catch((error) => {
+        console.error("Error sending message:", error);
+        bubbleElement.removeChild(loaderElement);
+        this.reply(`Error: ${error.message}`);
+
+        if (!bubbleElement.textContent.trim()) {
+          lastBotMessage.removeChild(bubbleElement);
+        }
+      })
+      .finally(() => {
+        if (!this.hasOfferedRealAgent) {
+          this.offerRealAgentOption();
+          this.hasOfferedRealAgent = true;
+        }
+      });
+  }
+
+  sendMessageToLiveAgent(message) {
+    const requestBody = {
+      roomId: this.currentRoomId,
+      message: message,
+      senderId: localStorage.getItem("userId"),
+    };
+
+    fetch(`${this.config.settings.chatEndpoint}send-message`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to send message to live agent");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log("Message sent to live agent:", data);
+      })
+      .catch((error) => {
+        console.error("Error sending message to live agent:", error);
+      });
+  }
+
+  appendMessage(type, content, timestamp) {
     const existingMessageElement = Array.from(
       this.chatElements.chatMessages.children
     ).find((messageElement) => {
@@ -1989,11 +2026,6 @@ class QLiveChatWidget {
     });
 
     if (existingMessageElement) {
-      console.log("Message already exists in DOM, skipping:", {
-        type,
-        content,
-        timestamp,
-      });
       return;
     }
 
@@ -2070,52 +2102,112 @@ class QLiveChatWidget {
   switchToRealAgent() {
     console.log("Switching to real agent...");
 
-    let openaiMessageCount =
-      this.conversationHistory[this.currentConversationIndex].messages.length;
-    console.log("Original OpenAI message count:", openaiMessageCount);
+    const url = `${this.config.settings.chatEndpoint}get-messages?roomId=${this.currentRoomId}`;
+    console.log("Fetching OpenAI messages count from URL:", url);
 
-    // Hardcode -3 untuk mengurangi gap sementara
-    openaiMessageCount -= 3;
-
-    localStorage.setItem("openaiMessageCount", openaiMessageCount);
-
-    fetch(
-      `${this.config.settings.chatEndpoint}${this.currentRoomId}/start-live-agent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    )
+    fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    })
       .then((response) => response.json())
       .then((data) => {
-        console.log("Switched to real agent. Response data:", data);
-        this.chatMode = "agent";
-        this.isLiveAgentSession = true;
-        this.updateCurrentConversationStatus("Live Agent");
-        this.resetChatMessages();
-        this.startLiveAgentFetching();
+        let openaiMessageCount = 0;
+        if (data.payload && data.payload.length > 0) {
+          openaiMessageCount = data.payload.length;
+          console.log("OpenAI message count fetched:", openaiMessageCount);
 
-        localStorage.setItem("chatMode", "agent");
-
-        this.reply(
-          "You have been transferred to a real agent. Please start your conversation."
-        );
-        this.chatElements.chatInput.value = "";
-        this.chatElements.chatInput.focus();
-        this.updateConversationList();
-        this.saveConversationHistory();
-        this.updateChatHeaderTitle();
-
-        const optionElement = document.getElementById("switch-agent");
-        if (optionElement) {
-          optionElement.remove();
+          localStorage.setItem("openaiMessageCount", openaiMessageCount);
+        } else {
+          console.warn("No OpenAI messages found. Proceeding with zero count.");
+          localStorage.setItem("openaiMessageCount", openaiMessageCount);
         }
 
-        this.fetchLiveAgentMessages();
+        fetch(
+          `${this.config.settings.chatEndpoint}${this.currentRoomId}/start-live-agent`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        )
+          .then((response) => response.json())
+          .then((data) => {
+            console.log("Switched to real agent. Response data:", data);
+            this.chatMode = "agent";
+            this.isLiveAgentSession = true;
+            this.updateCurrentConversationStatus("Live Agent");
+            this.resetChatMessages();
+            this.startLiveAgentFetching();
+
+            this.reply(
+              "You have been transferred to a real agent. Please start your conversation."
+            );
+            this.chatElements.chatInput.value = "";
+            this.chatElements.chatInput.focus();
+            this.updateConversationList();
+            this.saveConversationHistory();
+            this.updateChatHeaderTitle();
+
+            const optionElement = document.getElementById("switch-agent");
+            if (optionElement) {
+              optionElement.remove();
+            }
+
+            this.fetchLiveAgentMessages();
+          })
+          .catch((error) => {
+            console.error("Error switching to real agent:", error);
+          });
       })
-      .catch((error) => console.error("Error switching to real agent:", error));
+      .catch((error) => {
+        console.error("Error fetching OpenAI messages:", error);
+
+        localStorage.setItem("openaiMessageCount", 0);
+        fetch(
+          `${this.config.settings.chatEndpoint}${this.currentRoomId}/start-live-agent`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        )
+          .then((response) => response.json())
+          .then((data) => {
+            console.log(
+              "Switched to real agent after error. Response data:",
+              data
+            );
+            this.chatMode = "agent";
+            this.isLiveAgentSession = true;
+            this.updateCurrentConversationStatus("Live Agent");
+            this.resetChatMessages();
+            this.startLiveAgentFetching();
+
+            this.reply(
+              "You have been transferred to a real agent. Please start your conversation."
+            );
+            this.chatElements.chatInput.value = "";
+            this.chatElements.chatInput.focus();
+            this.updateConversationList();
+            this.saveConversationHistory();
+            this.updateChatHeaderTitle();
+
+            const optionElement = document.getElementById("switch-agent");
+            if (optionElement) {
+              optionElement.remove();
+            }
+
+            this.fetchLiveAgentMessages();
+          })
+          .catch((error) =>
+            console.error(
+              "Error switching to real agent after fetching messages failed:",
+              error
+            )
+          );
+      });
   }
 
   resetChatMessages() {
@@ -2509,30 +2601,46 @@ class QLiveChatWidget {
     const email = document.querySelector(
       '#email-transcript-page input[type="email"]'
     ).value;
-    const selectedConversation =
-      this.conversationHistory[this.currentConversationIndex];
+    const roomId = this.currentRoomId;
 
-    if (selectedConversation && !selectedConversation.active) {
-      let chatContent = `Chat Type: ${selectedConversation.status}\n`;
-      selectedConversation.messages.forEach((message) => {
-        chatContent += `${
-          message.type === "user"
-            ? "User"
-            : selectedConversation.status === "OpenAI"
-            ? "Bot"
-            : "Real Agent"
-        }: ${message.content}\n`;
-      });
+    fetch(`${this.config.settings.chatEndpoint}get-messages?roomId=${roomId}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.code === "success" && data.payload.length > 0) {
+          const messages = data.payload;
+          const firstMessage = messages[0];
+          const userInfo = firstMessage.metaCreatedByUser;
 
-      console.log(`Email tujuan: ${email}`);
-      console.log(`Isi chat:\n${chatContent}`);
-    } else if (selectedConversation && selectedConversation.active) {
-      console.log(
-        "Percakapan yang dipilih masih aktif. Email transcript tidak dapat dikirim."
+          let transcript = `User Information:\nName: ${userInfo.firstName} ${
+            userInfo.lastName || ""
+          }\nEmail: ${userInfo.email}\nPhone: ${
+            userInfo.phone
+          }\n\nTranscript:\n\n`;
+
+          messages.forEach((message) => {
+            const timestamp = new Date(message.createdAt).toLocaleString();
+            let senderType = "";
+
+            if (message.userId.startsWith("bot_")) {
+              senderType = "Bot";
+            } else if (message.userId.startsWith("temp_")) {
+              senderType = "User";
+            } else {
+              senderType = "Admin";
+            }
+
+            transcript += `[${timestamp}] ${senderType}: ${message.message}\n`;
+          });
+
+          console.log(`Email: ${email}`);
+          console.log(`Transcript:\n${transcript}`);
+        } else {
+          console.error("No messages found or conversation is still active.");
+        }
+      })
+      .catch((error) =>
+        console.error("Error fetching conversation messages:", error)
       );
-    } else {
-      console.log("Percakapan yang dipilih tidak tersedia atau masih aktif.");
-    }
 
     this.resetToLandingPage();
   }
@@ -2712,34 +2820,33 @@ class QLiveChatWidget {
 
     const openaiMessageCount =
       parseInt(localStorage.getItem("openaiMessageCount"), 10) || 0;
-    console.log("OpenAI Message Count:", openaiMessageCount);
-
-    const lastMessageCount = parseInt(
-      localStorage.getItem(this.messageCountKey) || "0",
-      10
-    );
-    console.log("Last Message Count:", lastMessageCount);
+    console.log("OpenAI Message Count from localStorage:", openaiMessageCount);
 
     const newMessageCount = newMessages.length;
 
     const filteredMessages = newMessages.slice(openaiMessageCount);
     console.log("Filtered Messages:", filteredMessages);
 
-    if (filteredMessages.length > 0) {
-      filteredMessages.forEach((message) => {
-        const localUserId = localStorage.getItem("userId");
+    const localUserId = localStorage.getItem("userId");
+
+    const filteredNewMessages = filteredMessages.filter(
+      (message) => message.userId !== localUserId
+    );
+
+    if (filteredNewMessages.length > 0) {
+      filteredNewMessages.forEach((message) => {
         const messageType = message.userId === localUserId ? "user" : "reply";
-        console.log("Processing message:", message);
 
         const existingMessage = this.conversationHistory[
           this.currentConversationIndex
         ].messages.find(
           (m) =>
-            m.timestamp === message.createdAt && m.content === message.message
+            m.timestamp === message.createdAt &&
+            m.content === message.message &&
+            m.senderId === message.userId
         );
 
         if (!existingMessage) {
-          console.log("Appending new message:", message);
           this.appendMessage(messageType, message.message, message.createdAt);
           this.updateCurrentConversation(
             message.message,
@@ -2747,7 +2854,6 @@ class QLiveChatWidget {
             message.createdAt
           );
         } else {
-          console.log("Message already exists, skipping:", message);
         }
       });
 
