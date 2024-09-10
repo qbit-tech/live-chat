@@ -1099,6 +1099,16 @@ class QLiveChatWidget {
           background-color: var(--color-primary-dark);
       }
 
+      .btn-start-chat:disabled {
+        background-color: #d3d3d3;
+        cursor: not-allowed;
+      }
+
+      .btn-edit:disabled {
+        background-color: #d3d3d3;
+        cursor: not-allowed;
+      }
+
       @media (max-width: 768px) {
         .chat-popup {
           width: 100%;
@@ -1245,7 +1255,10 @@ class QLiveChatWidget {
           <label for="message-confirmation">Message:</label>
           <textarea id="message-confirmation" name="message" rows="3" required></textarea>
         </div>
-        <button type="submit" class="btn-start-chat" id="start-chat">Start Chat</button>
+        <button type="submit" class="btn-start-chat" id="start-chat">
+          <span id="start-chat-text">Start Chat</span>
+          <span id="start-chat-loader" class="hidden">Please Wait</span>
+        </button>
         <button type="button" class="btn-edit" id="edit-info">Edit</button>
       </div>
     `;
@@ -1271,7 +1284,10 @@ class QLiveChatWidget {
             <label for="message">Message:</label>
             <textarea id="message" name="message" rows="3" required></textarea>
           </div>
-          <button type="submit" class="btn-start-chat">Start Chat</button>
+          <button type="submit" class="btn-start-chat">
+            <span id="start-chat-text">Start Chat</span>
+            <span id="start-chat-loader" class="hidden">Please Wait</span>
+          </button>
         </form>
       </div>
     `;
@@ -1754,6 +1770,17 @@ class QLiveChatWidget {
       return;
     }
 
+    const startChatButton = document.getElementById("start-chat");
+    const startChatText = document.getElementById("start-chat-text");
+    const startChatLoader = document.getElementById("start-chat-loader");
+    const editButton = document.getElementById("edit-info");
+    startChatButton.disabled = true;
+    startChatButton.classList.add("disabled");
+    startChatText.classList.add("hidden");
+    startChatLoader.classList.remove("hidden");
+    editButton.disabled = true;
+    editButton.classList.add("disabled");
+
     this.isRequestPending = true;
     this.hasOfferedRealAgent = false;
     this.isNewConversation = true;
@@ -1862,6 +1889,13 @@ class QLiveChatWidget {
       })
       .catch((error) => console.error("Error starting conversation:", error))
       .finally(() => {
+        startChatButton.disabled = false;
+        startChatButton.classList.remove("disabled");
+        startChatText.classList.remove("hidden");
+        startChatLoader.classList.add("hidden");
+        editButton.disabled = false;
+        editButton.classList.remove("disabled");
+
         this.isRequestPending = false;
       });
   }
