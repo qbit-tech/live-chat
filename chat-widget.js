@@ -1813,7 +1813,7 @@ class QLiveChatWidget {
               .then((response) => response.json())
               .then((data) => {
                 if (data.payload && data.payload.length > 0) {
-                  const lastMessage = data.payload[data.payload.length - 1]; 
+                  const lastMessage = data.payload[data.payload.length - 1];
                   if (lastMessage) {
                     const messageType =
                       lastMessage.senderId === localStorage.getItem("userId")
@@ -2122,6 +2122,8 @@ class QLiveChatWidget {
           localStorage.setItem("openaiMessageCount", openaiMessageCount);
         }
 
+        this.clearOpenAIHistoryForRoom(this.currentRoomId);
+
         fetch(
           `${this.config.settings.chatEndpoint}${this.currentRoomId}/start-live-agent`,
           {
@@ -2162,52 +2164,21 @@ class QLiveChatWidget {
       })
       .catch((error) => {
         console.error("Error fetching OpenAI messages:", error);
-
-        localStorage.setItem("openaiMessageCount", 0);
-        fetch(
-          `${this.config.settings.chatEndpoint}${this.currentRoomId}/start-live-agent`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        )
-          .then((response) => response.json())
-          .then((data) => {
-            console.log(
-              "Switched to real agent after error. Response data:",
-              data
-            );
-            this.chatMode = "agent";
-            this.isLiveAgentSession = true;
-            this.updateCurrentConversationStatus("Live Agent");
-            this.resetChatMessages();
-            this.startLiveAgentFetching();
-
-            this.reply(
-              "You have been transferred to a real agent. Please start your conversation."
-            );
-            this.chatElements.chatInput.value = "";
-            this.chatElements.chatInput.focus();
-            this.updateConversationList();
-            this.saveConversationHistory();
-            this.updateChatHeaderTitle();
-
-            const optionElement = document.getElementById("switch-agent");
-            if (optionElement) {
-              optionElement.remove();
-            }
-
-            this.fetchLiveAgentMessages();
-          })
-          .catch((error) =>
-            console.error(
-              "Error switching to real agent after fetching messages failed:",
-              error
-            )
-          );
       });
+  }
+
+  clearOpenAIHistoryForRoom(roomId) {
+    const conversationIndex = this.conversationHistory.findIndex(
+      (conversation) => conversation.roomId === roomId
+    );
+
+    if (conversationIndex !== -1) {
+      this.conversationHistory[conversationIndex].messages = [];
+
+      // this.conversationHistory[conversationIndex].status = "Live Agent";
+
+      this.saveConversationHistory();
+    }
   }
 
   resetChatMessages() {
